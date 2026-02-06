@@ -1,4 +1,6 @@
 -- Supprimer la base si elle existe
+\c postgres;
+
 DROP DATABASE IF EXISTS reservation;
 
 -- Créer la base
@@ -18,8 +20,9 @@ CREATE TABLE hotel (
 -- Table reservation
 CREATE TABLE reservation (
     id SERIAL PRIMARY KEY,
+    id_client VARCHAR(4) NOT NULL,
     id_hotel INTEGER NOT NULL,
-    nom VARCHAR(255) NOT NULL,
+    nb_passager INTEGER NOT NULL,
     date_heure_arrivee TIMESTAMP NOT NULL,
     CONSTRAINT fk_hotel
         FOREIGN KEY (id_hotel)

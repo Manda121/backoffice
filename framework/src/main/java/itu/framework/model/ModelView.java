@@ -5,6 +5,7 @@ public class ModelView {
     private HashMap<String, Object> data;
 
     public ModelView() {
+        this.data = new HashMap<>();
     }
 
     public ModelView(String view) {

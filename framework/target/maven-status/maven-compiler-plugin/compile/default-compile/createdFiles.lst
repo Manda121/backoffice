@@ -1,6 +1,10 @@
 itu\framework\annotations\MyURL.class
+itu\framework\model\JsonResponse.class
+itu\framework\annotations\JsonIgnore.class
 itu\framework\servlet\FrontServlet.class
+itu\framework\db\DatabaseConnection.class
 itu\framework\annotations\MyController.class
 itu\framework\annotations\MyParam.class
 itu\framework\model\ModelView.class
+itu\framework\servlet\FrontServlet$MethodMatch.class
 itu\framework\util\ControllerScanner.class
