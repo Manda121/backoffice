@@ -1,0 +1,3 @@
+models\Hotel.class
+models\Reservation.class
+controller\ReservationController.class

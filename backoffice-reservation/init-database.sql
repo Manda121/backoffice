@@ -1,4 +1,4 @@
-
+-- Insertion des données d'hôtels
 INSERT INTO hotel (name, ville, adresse) VALUES
 ('Hôtel Colbert', 'Antananarivo', '29 Rue Printsy Ratsimamanga'),
 ('Carlton Hotel', 'Antananarivo', 'Anosy, 101'),
