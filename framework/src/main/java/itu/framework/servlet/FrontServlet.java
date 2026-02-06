@@ -381,6 +381,33 @@ public class FrontServlet extends HttpServlet {
             return jsonObj;
         }
 
+        // Date/time handling: format as YYYY-MM-DD
+        if (obj instanceof java.util.Date) {
+            java.text.SimpleDateFormat sdfDate = new java.text.SimpleDateFormat("yyyy-MM-dd");
+            java.text.SimpleDateFormat sdfTime = new java.text.SimpleDateFormat("HH:mm");
+            String datePart = sdfDate.format((java.util.Date) obj);
+            String timePart = sdfTime.format((java.util.Date) obj);
+            JSONObject dateObj = new JSONObject();
+            dateObj.put("date", datePart);
+            dateObj.put("heure", timePart);
+            System.out.println("[JsonSerialize] Date class: " + obj.getClass().getName() + " -> " + datePart + " " + timePart);
+            return dateObj;
+        }
+        if (obj instanceof java.time.LocalDate) {
+            JSONObject dateObj = new JSONObject();
+            dateObj.put("date", java.time.format.DateTimeFormatter.ISO_LOCAL_DATE.format((java.time.LocalDate) obj));
+            dateObj.put("heure", JSONObject.NULL);
+            return dateObj;
+        }
+        if (obj instanceof java.time.LocalDateTime) {
+            String datePart = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE.format(((java.time.LocalDateTime) obj).toLocalDate());
+            String timePart = ((java.time.LocalDateTime) obj).toLocalTime().withSecond(0).withNano(0).toString();
+            JSONObject dateObj = new JSONObject();
+            dateObj.put("date", datePart);
+            dateObj.put("heure", timePart.substring(0,5)); // HH:MM
+            return dateObj;
+        }
+
         // Objets personnalisés
         visited.add(obj);
         JSONObject jsonObj = new JSONObject();
