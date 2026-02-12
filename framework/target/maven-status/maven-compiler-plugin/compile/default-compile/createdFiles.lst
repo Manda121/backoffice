@@ -7,4 +7,5 @@ itu\framework\annotations\MyController.class
 itu\framework\annotations\MyParam.class
 itu\framework\model\ModelView.class
 itu\framework\servlet\FrontServlet$MethodMatch.class
+itu\framework\servlet\FrontServlet$JsonBodyRequestWrapper.class
 itu\framework\util\ControllerScanner.class

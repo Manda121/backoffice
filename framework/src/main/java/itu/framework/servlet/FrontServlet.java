@@ -70,8 +70,16 @@ public class FrontServlet extends HttpServlet {
         }
 
         try {
-            Object result = invokeControllerMethod(req, methodMatch, httpMethod);
-            handleResult(req, resp, result);
+            // Supporter les POST JSON : si Content-Type contient application/json,
+            // on enveloppe la requête pour exposer le JSON comme paramètres (getParameter(...)).
+            HttpServletRequest callReq = req;
+            String contentType = req.getContentType();
+            if ("POST".equalsIgnoreCase(httpMethod) && contentType != null && contentType.toLowerCase().contains("application/json")) {
+                callReq = new JsonBodyRequestWrapper(req);
+            }
+
+            Object result = invokeControllerMethod(callReq, methodMatch, httpMethod);
+            handleResult(callReq, resp, result);
         } catch (Exception e) {
             handleError(resp, e);
         }
@@ -498,7 +506,20 @@ public class FrontServlet extends HttpServlet {
 
     private void handleError(HttpServletResponse resp, Exception e) throws IOException {
         e.printStackTrace();
-        resp.getWriter().write("<p style='color:red;'>Erreur : " + e.getMessage() + "</p>");
+        // Fournir plus d'informations dans la réponse pour faciliter le debug en local
+        String exClass = e.getClass().getName();
+        String exMessage = e.getMessage();
+        StackTraceElement[] st = e.getStackTrace();
+        String top = (st != null && st.length > 0) ? st[0].toString() : "(no-stack)";
+        StringBuilder sb = new StringBuilder();
+        sb.append("<div style='color:red;font-family:monospace;'>");
+        sb.append("<b>Exception:</b> ").append(exClass);
+        if (exMessage != null) {
+            sb.append(" - ").append(exMessage);
+        }
+        sb.append("<br/><b>At:</b> ").append(top);
+        sb.append("</div>");
+        resp.getWriter().write(sb.toString());
     }
 
     /**
@@ -533,5 +554,69 @@ public class FrontServlet extends HttpServlet {
         }
 
         return params;
+    }
+
+    /**
+     * Wrapper pour exposer un body JSON (application/json) comme paramètres de requête
+     * afin que les méthodes annotées avec @MyParam continuent de fonctionner.
+     */
+    private static class JsonBodyRequestWrapper extends jakarta.servlet.http.HttpServletRequestWrapper {
+        private final java.util.Map<String, String[]> combinedParams;
+
+        JsonBodyRequestWrapper(jakarta.servlet.http.HttpServletRequest request) {
+            super(request);
+            java.util.Map<String, String[]> original = request.getParameterMap();
+            java.util.Map<String, String[]> jsonParams = new java.util.HashMap<>();
+
+            try {
+                StringBuilder sb = new StringBuilder();
+                java.io.BufferedReader reader = request.getReader();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line);
+                }
+                String body = sb.toString().trim();
+                if (!body.isEmpty()) {
+                    org.json.JSONObject json = new org.json.JSONObject(body);
+                    for (String key : json.keySet()) {
+                        Object v = json.get(key);
+                        if (v == org.json.JSONObject.NULL) {
+                            jsonParams.put(key, new String[] { null });
+                        } else {
+                            jsonParams.put(key, new String[] { String.valueOf(v) });
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // ignore - on garde uniquement les paramètres existants si le JSON est invalide
+            }
+
+            // fusionne original + json (json écrase les params existants)
+            combinedParams = new java.util.HashMap<>();
+            if (original != null) combinedParams.putAll(original);
+            combinedParams.putAll(jsonParams);
+        }
+
+        @Override
+        public String getParameter(String name) {
+            String[] vals = combinedParams.get(name);
+            if (vals == null) return null;
+            return vals.length > 0 ? vals[0] : null;
+        }
+
+        @Override
+        public java.util.Map<String, String[]> getParameterMap() {
+            return java.util.Collections.unmodifiableMap(combinedParams);
+        }
+
+        @Override
+        public java.util.Enumeration<String> getParameterNames() {
+            return java.util.Collections.enumeration(combinedParams.keySet());
+        }
+
+        @Override
+        public String[] getParameterValues(String name) {
+            return combinedParams.get(name);
+        }
     }
 }
