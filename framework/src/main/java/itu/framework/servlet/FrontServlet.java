@@ -359,6 +359,16 @@ public class FrontServlet extends HttpServlet {
             return obj;
         }
 
+        // Character (char boxed) - pas capturé par Number ni String
+        if (obj instanceof Character) {
+            return obj.toString();
+        }
+
+        // Enum
+        if (obj instanceof Enum) {
+            return ((Enum<?>) obj).name();
+        }
+
         // Collections
         if (obj instanceof java.util.Collection) {
             visited.add(obj);
@@ -408,25 +418,58 @@ public class FrontServlet extends HttpServlet {
             return dateObj;
         }
 
-        // Objets personnalisés
+        // Classes du JDK (java.*, javax.*, jdk.*) — évite la réflexion sur les modules fermés
+        String className = obj.getClass().getName();
+        if (className.startsWith("java.") || className.startsWith("javax.") || className.startsWith("jdk.")) {
+            return obj.toString();
+        }
+
+        // Objets personnalisés — utilise les getters publics pour éviter setAccessible
         visited.add(obj);
         JSONObject jsonObj = new JSONObject();
 
         try {
             Field[] fields = obj.getClass().getDeclaredFields();
             for (Field field : fields) {
+                // Ignore les champs statiques
+                if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+                    continue;
+                }
                 // Ignore les champs avec @JsonIgnore
                 if (field.isAnnotationPresent(JsonIgnore.class)) {
                     continue;
                 }
 
-                field.setAccessible(true);
-                Object value = field.get(obj);
+                String fieldName = field.getName();
+                Object value = null;
+
+                // Chercher le getter public correspondant
+                try {
+                    String getterName = "get" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
+                    java.lang.reflect.Method getter = obj.getClass().getMethod(getterName);
+                    value = getter.invoke(obj);
+                } catch (NoSuchMethodException e) {
+                    // Essayer isXxx() pour les booléens
+                    try {
+                        String isGetterName = "is" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
+                        java.lang.reflect.Method isGetter = obj.getClass().getMethod(isGetterName);
+                        value = isGetter.invoke(obj);
+                    } catch (NoSuchMethodException e2) {
+                        // Pas de getter, essayer l'accès direct en dernier recours
+                        try {
+                            field.setAccessible(true);
+                            value = field.get(obj);
+                        } catch (Exception e3) {
+                            // Si l'accès échoue (module fermé), on skip ce champ
+                            continue;
+                        }
+                    }
+                }
 
                 if (value != null) {
-                    jsonObj.put(field.getName(), objectToJson(value, visited));
+                    jsonObj.put(fieldName, objectToJson(value, visited));
                 } else {
-                    jsonObj.put(field.getName(), JSONObject.NULL);
+                    jsonObj.put(fieldName, JSONObject.NULL);
                 }
             }
         } catch (Exception e) {

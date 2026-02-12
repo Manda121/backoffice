@@ -2,27 +2,23 @@
 echo ========================================
 echo    Generateur de Token d'API
 echo ========================================
-
 echo.
-echo [1/3] Compilation du projet...
-call mvn compile -q
+
+set SRC=src\main\java\util\Main.java
+set OUT=target\classes
+set PG_JAR=%USERPROFILE%\.m2\repository\org\postgresql\postgresql\42.7.1\postgresql-42.7.1.jar
+
+echo [1/2] Compilation de Main.java...
+javac -d "%OUT%" -cp "%PG_JAR%" "%SRC%"
 if errorlevel 1 (
     echo ERREUR: La compilation a echoue !
     goto end
 )
 echo       OK
 
-echo [2/3] Copie des dependances...
-call mvn dependency:copy-dependencies -DoutputDirectory=target/libs -q 2>nul
-if errorlevel 1 (
-    echo ERREUR: Impossible de copier les dependances !
-    goto end
-)
-echo       OK
-
-echo [3/3] Execution du generateur de token...
+echo [2/2] Execution du generateur de token...
 echo.
-java -cp "target/classes;target/libs/*" util.Main
+java -cp "%OUT%;%PG_JAR%" util.Main
 
 :end
 echo.
