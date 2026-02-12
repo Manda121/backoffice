@@ -1,27 +1,22 @@
 -- Insertion des données d'hôtels
 INSERT INTO hotel (name, ville, adresse) VALUES
-('Hôtel Colbert', 'Antananarivo', '29 Rue Printsy Ratsimamanga'),
-('Carlton Hotel', 'Antananarivo', 'Anosy, 101'),
-('Hotel du Louvre', 'Antananarivo', 'Avenue de l''Indépendance'),
-('Hotel Le Glacier', 'Antsirabe', 'Route d''Ambositra'),
-('Zomatel', 'Antananarivo', 'Lot IVA 31 Andranomena Anosiala'),
-('La Ribaudière', 'Antananarivo', 'Route des Hydrocarbures, Ankorondrano'),
-('Hotel Sakamanga', 'Antananarivo', 'Rue Andriantsitoainarivo, Antaninarenina'),
-('Hotel Palissandre', 'Antananarivo', 'Lot II J 130 A Ambodivona'),
-('Le Pavillon de l''Emyrne', 'Antananarivo', 'Lot VK 10 Ambohijatovo Ivandry'),
-('Maritim Hotel', 'Mahajanga', 'Boulevard de la Corniche'),
-('Hotel Sunny', 'Toamasina', 'Boulevard Joffre'),
-('Eden Lodge', 'Nosy Be', 'Andilana Beach'),
-('Royal Beach Hotel', 'Nosy Be', 'Madirokely Beach'),
-('Le Paradisier', 'Sainte-Marie', 'Ambodifotatra'),
-('Princesse Bora Lodge', 'Sainte-Marie', 'Île aux Nattes'),
-('Hotel Mira', 'Toliara', 'Avenue de France'),
-('Hotel Le Dauphin', 'Diego-Suarez', 'Rue Colbert'),
-('Laguna Beach', 'Ifaty', 'Plage d''Ifaty'),
-('Hotel Vovo Telo', 'Morondava', 'Boulevard de la Plage'),
-('Mandrare River Camp', 'Fort-Dauphin', 'Réserve de Mandrare');
+('Colbert', 'Antananarivo', '29 Rue Printsy Ratsimamanga'),
+('Novotel', 'Antananarivo', 'Anosy, 101'),
+('Ibis', 'Antananarivo', 'Avenue de l''Indépendance'),
+('Lokanga', 'Antsirabe', 'Route d''Ambositra');
 
 -- Afficher les données insérées
 SELECT 'Hotels insérés:' as info;
 SELECT * FROM hotel;
 
+INSERT INTO reservation (id_client, id_hotel, nb_passager, date_heure_arrivee) VALUES
+('4631', 3, 11, '2026-02-05 00:01:00'),
+('4394', 3, 1, '2026-02-05 23:55:00'),
+('8054', 1, 2, '2026-02-09 10:17:00'),
+('1432', 2, 4, '2026-02-01 15:25:00'),
+('7861', 1, 4, '2026-01-28 07:11:00'),
+('3308', 1, 5, '2026-01-28 07:45:00'),
+('4484', 2, 13, '2026-02-28 08:25:00'),
+('9687', 2, 8, '2026-02-28 13:00:00'),
+('6302', 1, 7, '2026-02-15 13:00:00'),
+('8640', 4, 1, '2026-02-18 22:55:00');
