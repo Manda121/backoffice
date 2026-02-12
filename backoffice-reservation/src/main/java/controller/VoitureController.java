@@ -8,8 +8,10 @@ import itu.framework.annotations.MyController;
 import itu.framework.annotations.MyParam;
 import itu.framework.annotations.MyURL;
 import itu.framework.db.DatabaseConnection;
+import itu.framework.model.JsonResponse;
 import itu.framework.model.ModelView;
 import models.Voiture;
+import util.TokenUtil;
 
 @MyController
 public class VoitureController {
@@ -243,6 +245,173 @@ public class VoitureController {
         }
 
         return mv;
+    }
+
+    // ===================================================
+    //  API JSON (avec contrôle de token)
+    // ===================================================
+
+    /**
+     * API: Liste toutes les voitures
+     * GET /api/voitures?token=xxx
+     */
+    @MyURL(value = "/api/voitures", method = "GET")
+    public JsonResponse apiListVoitures(@MyParam(value = "token") String token) {
+        if (!TokenUtil.isValidToken(token)) {
+            return JsonResponse.unauthorized("Token invalide ou expiré");
+        }
+        try {
+            List<Voiture> voitures = getAllVoitures();
+            return JsonResponse.success(voitures, "Liste des voitures récupérée avec succès");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return JsonResponse.serverError("Erreur: " + e.getMessage());
+        }
+    }
+
+    /**
+     * API: Récupérer une voiture par ID
+     * GET /api/voiture?id=X&token=xxx
+     */
+    @MyURL(value = "/api/voiture", method = "GET")
+    public JsonResponse apiGetVoiture(@MyParam(value = "id") int id, @MyParam(value = "token") String token) {
+        if (!TokenUtil.isValidToken(token)) {
+            return JsonResponse.unauthorized("Token invalide ou expiré");
+        }
+        try {
+            Voiture voiture = getVoitureById(id);
+            if (voiture == null) {
+                return JsonResponse.notFound("Voiture introuvable (ID: " + id + ")");
+            }
+            return JsonResponse.success(voiture, "Voiture récupérée avec succès");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return JsonResponse.serverError("Erreur: " + e.getMessage());
+        }
+    }
+
+    /**
+     * API: Créer une voiture
+     * POST /api/voiture/save?token=xxx  (params: marque, nbPlace, type, carburant)
+     */
+    @MyURL(value = "/api/voiture/save", method = "POST")
+    public JsonResponse apiSaveVoiture(
+            @MyParam(value = "token") String token,
+            @MyParam(value = "marque") String marque,
+            @MyParam(value = "nbPlace") int nbPlace,
+            @MyParam(value = "type") String type,
+            @MyParam(value = "carburant") String carburant) {
+
+        if (!TokenUtil.isValidToken(token)) {
+            return JsonResponse.unauthorized("Token invalide ou expiré");
+        }
+        if (marque == null || marque.trim().isEmpty()) {
+            return JsonResponse.badRequest("La marque est obligatoire");
+        }
+        if (carburant == null || carburant.length() != 1 || "deh".indexOf(carburant.charAt(0)) == -1) {
+            return JsonResponse.badRequest("Le carburant doit être 'd', 'e' ou 'h'");
+        }
+
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+
+        try {
+            conn = DatabaseConnection.getConnection();
+            String sql = "INSERT INTO voiture (marque, nb_place, type, carburant) VALUES (?, ?, ?, ?)";
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setString(1, marque.trim());
+            pstmt.setInt(2, nbPlace);
+            pstmt.setString(3, type.trim());
+            pstmt.setString(4, carburant);
+            pstmt.executeUpdate();
+
+            return JsonResponse.success(null, "Voiture créée avec succès");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return JsonResponse.serverError("Erreur: " + e.getMessage());
+        } finally {
+            closeResources(null, pstmt, conn);
+        }
+    }
+
+    /**
+     * API: Modifier une voiture
+     * POST /api/voiture/update?token=xxx  (params: id, marque, nbPlace, type, carburant)
+     */
+    @MyURL(value = "/api/voiture/update", method = "POST")
+    public JsonResponse apiUpdateVoiture(
+            @MyParam(value = "token") String token,
+            @MyParam(value = "id") int id,
+            @MyParam(value = "marque") String marque,
+            @MyParam(value = "nbPlace") int nbPlace,
+            @MyParam(value = "type") String type,
+            @MyParam(value = "carburant") String carburant) {
+
+        if (!TokenUtil.isValidToken(token)) {
+            return JsonResponse.unauthorized("Token invalide ou expiré");
+        }
+        if (marque == null || marque.trim().isEmpty()) {
+            return JsonResponse.badRequest("La marque est obligatoire");
+        }
+
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+
+        try {
+            conn = DatabaseConnection.getConnection();
+            String sql = "UPDATE voiture SET marque = ?, nb_place = ?, type = ?, carburant = ? WHERE id = ?";
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setString(1, marque.trim());
+            pstmt.setInt(2, nbPlace);
+            pstmt.setString(3, type.trim());
+            pstmt.setString(4, carburant);
+            pstmt.setInt(5, id);
+
+            int rows = pstmt.executeUpdate();
+            if (rows > 0) {
+                return JsonResponse.success(null, "Voiture modifiée avec succès");
+            } else {
+                return JsonResponse.notFound("Voiture introuvable (ID: " + id + ")");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return JsonResponse.serverError("Erreur: " + e.getMessage());
+        } finally {
+            closeResources(null, pstmt, conn);
+        }
+    }
+
+    /**
+     * API: Supprimer une voiture
+     * GET /api/voiture/delete?id=X&token=xxx
+     */
+    @MyURL(value = "/api/voiture/delete", method = "GET")
+    public JsonResponse apiDeleteVoiture(@MyParam(value = "id") int id, @MyParam(value = "token") String token) {
+        if (!TokenUtil.isValidToken(token)) {
+            return JsonResponse.unauthorized("Token invalide ou expiré");
+        }
+
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+
+        try {
+            conn = DatabaseConnection.getConnection();
+            String sql = "DELETE FROM voiture WHERE id = ?";
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, id);
+
+            int rows = pstmt.executeUpdate();
+            if (rows > 0) {
+                return JsonResponse.success(null, "Voiture supprimée avec succès");
+            } else {
+                return JsonResponse.notFound("Voiture introuvable (ID: " + id + ")");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return JsonResponse.serverError("Erreur: " + e.getMessage());
+        } finally {
+            closeResources(null, pstmt, conn);
+        }
     }
 
     // ===========================
