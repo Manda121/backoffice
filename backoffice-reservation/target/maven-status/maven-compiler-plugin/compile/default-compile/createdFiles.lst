@@ -1,3 +1,7 @@
 models\Hotel.class
 models\Reservation.class
 controller\ReservationController.class
+models\Voiture.class
+util\Main.class
+controller\VoitureController.class
+util\TokenUtil.class

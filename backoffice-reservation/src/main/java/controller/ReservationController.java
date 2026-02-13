@@ -12,6 +12,7 @@ import itu.framework.model.JsonResponse;
 import itu.framework.model.ModelView;
 import models.Hotel;
 import models.Reservation;
+import util.TokenUtil;
 
 @MyController
 public class ReservationController {
@@ -103,10 +104,15 @@ public class ReservationController {
     }
 
     /**
-     * API JSON: Liste toutes les réservations
+     * API JSON: Liste toutes les réservations (protégé par token)
+     * GET /api/reservations?token=xxx
      */
     @MyURL(value = "/api/reservations", method = "GET")
-    public JsonResponse listReservationsApi() {
+    public JsonResponse listReservationsApi(@MyParam(value = "token") String token) {
+        if (!TokenUtil.isValidToken(token)) {
+            return JsonResponse.unauthorized("Token invalide ou expiré");
+        }
+
         JsonResponse response = new JsonResponse();
         
         try {

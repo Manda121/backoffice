@@ -70,8 +70,16 @@ public class FrontServlet extends HttpServlet {
         }
 
         try {
-            Object result = invokeControllerMethod(req, methodMatch, httpMethod);
-            handleResult(req, resp, result);
+            // Supporter les POST JSON : si Content-Type contient application/json,
+            // on enveloppe la requête pour exposer le JSON comme paramètres (getParameter(...)).
+            HttpServletRequest callReq = req;
+            String contentType = req.getContentType();
+            if ("POST".equalsIgnoreCase(httpMethod) && contentType != null && contentType.toLowerCase().contains("application/json")) {
+                callReq = new JsonBodyRequestWrapper(req);
+            }
+
+            Object result = invokeControllerMethod(callReq, methodMatch, httpMethod);
+            handleResult(callReq, resp, result);
         } catch (Exception e) {
             handleError(resp, e);
         }
@@ -359,6 +367,16 @@ public class FrontServlet extends HttpServlet {
             return obj;
         }
 
+        // Character (char boxed) - pas capturé par Number ni String
+        if (obj instanceof Character) {
+            return obj.toString();
+        }
+
+        // Enum
+        if (obj instanceof Enum) {
+            return ((Enum<?>) obj).name();
+        }
+
         // Collections
         if (obj instanceof java.util.Collection) {
             visited.add(obj);
@@ -408,25 +426,58 @@ public class FrontServlet extends HttpServlet {
             return dateObj;
         }
 
-        // Objets personnalisés
+        // Classes du JDK (java.*, javax.*, jdk.*) — évite la réflexion sur les modules fermés
+        String className = obj.getClass().getName();
+        if (className.startsWith("java.") || className.startsWith("javax.") || className.startsWith("jdk.")) {
+            return obj.toString();
+        }
+
+        // Objets personnalisés — utilise les getters publics pour éviter setAccessible
         visited.add(obj);
         JSONObject jsonObj = new JSONObject();
 
         try {
             Field[] fields = obj.getClass().getDeclaredFields();
             for (Field field : fields) {
+                // Ignore les champs statiques
+                if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+                    continue;
+                }
                 // Ignore les champs avec @JsonIgnore
                 if (field.isAnnotationPresent(JsonIgnore.class)) {
                     continue;
                 }
 
-                field.setAccessible(true);
-                Object value = field.get(obj);
+                String fieldName = field.getName();
+                Object value = null;
+
+                // Chercher le getter public correspondant
+                try {
+                    String getterName = "get" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
+                    java.lang.reflect.Method getter = obj.getClass().getMethod(getterName);
+                    value = getter.invoke(obj);
+                } catch (NoSuchMethodException e) {
+                    // Essayer isXxx() pour les booléens
+                    try {
+                        String isGetterName = "is" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
+                        java.lang.reflect.Method isGetter = obj.getClass().getMethod(isGetterName);
+                        value = isGetter.invoke(obj);
+                    } catch (NoSuchMethodException e2) {
+                        // Pas de getter, essayer l'accès direct en dernier recours
+                        try {
+                            field.setAccessible(true);
+                            value = field.get(obj);
+                        } catch (Exception e3) {
+                            // Si l'accès échoue (module fermé), on skip ce champ
+                            continue;
+                        }
+                    }
+                }
 
                 if (value != null) {
-                    jsonObj.put(field.getName(), objectToJson(value, visited));
+                    jsonObj.put(fieldName, objectToJson(value, visited));
                 } else {
-                    jsonObj.put(field.getName(), JSONObject.NULL);
+                    jsonObj.put(fieldName, JSONObject.NULL);
                 }
             }
         } catch (Exception e) {
@@ -455,7 +506,20 @@ public class FrontServlet extends HttpServlet {
 
     private void handleError(HttpServletResponse resp, Exception e) throws IOException {
         e.printStackTrace();
-        resp.getWriter().write("<p style='color:red;'>Erreur : " + e.getMessage() + "</p>");
+        // Fournir plus d'informations dans la réponse pour faciliter le debug en local
+        String exClass = e.getClass().getName();
+        String exMessage = e.getMessage();
+        StackTraceElement[] st = e.getStackTrace();
+        String top = (st != null && st.length > 0) ? st[0].toString() : "(no-stack)";
+        StringBuilder sb = new StringBuilder();
+        sb.append("<div style='color:red;font-family:monospace;'>");
+        sb.append("<b>Exception:</b> ").append(exClass);
+        if (exMessage != null) {
+            sb.append(" - ").append(exMessage);
+        }
+        sb.append("<br/><b>At:</b> ").append(top);
+        sb.append("</div>");
+        resp.getWriter().write(sb.toString());
     }
 
     /**
@@ -490,5 +554,69 @@ public class FrontServlet extends HttpServlet {
         }
 
         return params;
+    }
+
+    /**
+     * Wrapper pour exposer un body JSON (application/json) comme paramètres de requête
+     * afin que les méthodes annotées avec @MyParam continuent de fonctionner.
+     */
+    private static class JsonBodyRequestWrapper extends jakarta.servlet.http.HttpServletRequestWrapper {
+        private final java.util.Map<String, String[]> combinedParams;
+
+        JsonBodyRequestWrapper(jakarta.servlet.http.HttpServletRequest request) {
+            super(request);
+            java.util.Map<String, String[]> original = request.getParameterMap();
+            java.util.Map<String, String[]> jsonParams = new java.util.HashMap<>();
+
+            try {
+                StringBuilder sb = new StringBuilder();
+                java.io.BufferedReader reader = request.getReader();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line);
+                }
+                String body = sb.toString().trim();
+                if (!body.isEmpty()) {
+                    org.json.JSONObject json = new org.json.JSONObject(body);
+                    for (String key : json.keySet()) {
+                        Object v = json.get(key);
+                        if (v == org.json.JSONObject.NULL) {
+                            jsonParams.put(key, new String[] { null });
+                        } else {
+                            jsonParams.put(key, new String[] { String.valueOf(v) });
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // ignore - on garde uniquement les paramètres existants si le JSON est invalide
+            }
+
+            // fusionne original + json (json écrase les params existants)
+            combinedParams = new java.util.HashMap<>();
+            if (original != null) combinedParams.putAll(original);
+            combinedParams.putAll(jsonParams);
+        }
+
+        @Override
+        public String getParameter(String name) {
+            String[] vals = combinedParams.get(name);
+            if (vals == null) return null;
+            return vals.length > 0 ? vals[0] : null;
+        }
+
+        @Override
+        public java.util.Map<String, String[]> getParameterMap() {
+            return java.util.Collections.unmodifiableMap(combinedParams);
+        }
+
+        @Override
+        public java.util.Enumeration<String> getParameterNames() {
+            return java.util.Collections.enumeration(combinedParams.keySet());
+        }
+
+        @Override
+        public String[] getParameterValues(String name) {
+            return combinedParams.get(name);
+        }
     }
 }
