@@ -1,25 +1,25 @@
-TEAM LEAD: ETU03377 RAZAFINJATOVO Mialy Soa Lucia
-Dev backoffice: ETU003280 MITANTSOA Notiavina Mandaniaina
-Dev frontoffice: ETU003354 RANTHOLY Kamel Tommy
+TEAM LEAD: ETU03280 MITANTSOA Notiavina Mandaniaina
+Dev backend: ETU003354
+Dev front_end: ETU003377
 
 ===============================================
-SPRINT 2: Genener script .bat de creation token , enregistrement voitures
+SPRINT 1: enregistrement réservation
 ===============================================
 
 1. Configurer la connexion BD (15 min)
    - Ajouter la configuration de la datasource (URL, driver, username, password) dans `application.properties` du module approprié et valider la connexion.
 
 2. Script d'insertion (5 min)
-   - Écrire un script SQL ou une méthode utilitaire pour insérer des voitures et le token
+   - Écrire un script SQL ou une méthode utilitaire pour insérer des réservations
 
 3. Formulaire d'enregistrement (10 min)
-   - Créer `form-Voiture.jsp` avec les champs nécessaires et un POST vers un endpoint de sauvegarde.
+   - Créer `form-reservation.jsp` avec les champs nécessaires et un POST vers un endpoint de sauvegarde.
 
 4. Endpoint backend de sauvegarde (15 min)
-   - Implémenter le controller dans VoitureController.java qui reçoit le POST, valide les données et persiste la `Voiture` via un repository.
+   - Implémenter le controller dans ReservationController.java qui reçoit le POST, valide les données et persiste la `Reservation` via un repository.
 
-5. API REST GET /api/Voitures (15 min)
-   - Créer `GET /api/Voitures` dans le VoitureController.java qui renvoie la liste des réservations en JSON.
+5. API REST GET /api/reservations (15 min)
+   - Créer `GET /api/reservations` dans le ReservationController.java qui renvoie la liste des réservations en JSON.
 
 ===============================================
 ESTIMATION TOTALE: 65 min
