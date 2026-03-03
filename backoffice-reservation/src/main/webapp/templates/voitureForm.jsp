@@ -114,6 +114,13 @@
             </div>
 
             <div class="form-group">
+                <label for="matricule">Matricule :</label>
+                <input type="text" id="matricule" name="matricule"
+                       value="<%= (isEdit && voiture != null && voiture.getMatricule() != null) ? voiture.getMatricule() : "" %>"
+                       placeholder="Ex: MAD-001, IMM-1234-TA...">
+            </div>
+
+            <div class="form-group">
                 <label for="nbPlace">Nombre de places :</label>
                 <input type="number" id="nbPlace" name="nbPlace" min="1" max="50" required
                        value="<%= (isEdit && voiture != null) ? voiture.getNbPlace() : "" %>">

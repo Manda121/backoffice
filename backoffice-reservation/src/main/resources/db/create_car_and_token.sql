@@ -8,6 +8,7 @@ CREATE TABLE voiture (
     marque VARCHAR(255) NOT NULL,
     nb_place INTEGER NOT NULL,
     type VARCHAR(255) NOT NULL,
+    matricule VARCHAR(255) NOT NULL,
     carburant CHAR(1) NOT NULL CHECK (carburant IN ('d', 'e', 'h'))
 );
 

@@ -9,6 +9,10 @@ public class Reservation {
     private int nbPassager;
     private Timestamp dateHeureArrivee;
     
+    // Lieu de destination (sprint 2)
+    private int idLieuDestination;
+    private String lieuCode;
+
     // Pour afficher les détails de l'hôtel
     private String hotelName;
     private String hotelVille;
@@ -79,4 +83,10 @@ public class Reservation {
     public void setHotelVille(String hotelVille) {
         this.hotelVille = hotelVille;
     }
+
+    public int getIdLieuDestination() { return idLieuDestination; }
+    public void setIdLieuDestination(int idLieuDestination) { this.idLieuDestination = idLieuDestination; }
+
+    public String getLieuCode() { return lieuCode; }
+    public void setLieuCode(String lieuCode) { this.lieuCode = lieuCode; }
 }
