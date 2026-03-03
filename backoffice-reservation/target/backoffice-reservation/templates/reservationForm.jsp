@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="java.util.List" %>
 <%@ page import="models.Hotel" %>
+<%@ page import="models.Lieu" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -113,6 +114,26 @@
             <div class="form-group">
                 <label for="dateHeureArrivee">Date et heure d'arrivée:</label>
                 <input type="datetime-local" id="dateHeureArrivee" name="dateHeureArrivee" required>
+            </div>
+
+            <div class="form-group">
+                <label for="idLieuDestination">Lieu de destination :</label>
+                <select id="idLieuDestination" name="idLieuDestination">
+                    <option value="">-- Sélectionner un lieu (optionnel) --</option>
+                    <%
+                        List<Lieu> lieux = (List<Lieu>) request.getAttribute("lieux");
+                        if (lieux != null) {
+                            for (Lieu lieu : lieux) {
+                    %>
+                    <option value="<%= lieu.getId() %>">
+                        <%= lieu.getCode() %><% if (lieu.isAirport()) { %> (✈ Aéroport)<% } %>
+                    </option>
+                    <%
+                            }
+                        }
+                    %>
+                </select>
+                <div class="info">* Requis pour la planification des véhicules</div>
             </div>
 
             <input type="submit" value="Enregistrer la réservation">

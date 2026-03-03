@@ -68,6 +68,9 @@
             <a href="${pageContext.request.contextPath}/reservation/list" class="btn btn-secondary">
                 Voir les réservations
             </a>
+            <a href="${pageContext.request.contextPath}/planning/form" class="btn" style="background:#3f51b5; color:white;">
+                📊 Planning des véhicules
+            </a>
         </div>
     </div>
 </body>

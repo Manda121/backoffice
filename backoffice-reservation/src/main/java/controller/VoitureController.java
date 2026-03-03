@@ -54,7 +54,8 @@ public class VoitureController {
             @MyParam(value = "marque") String marque,
             @MyParam(value = "nbPlace") int nbPlace,
             @MyParam(value = "type") String type,
-            @MyParam(value = "carburant") String carburant) {
+            @MyParam(value = "carburant") String carburant,
+            @MyParam(value = "matricule") String matricule) {
 
         ModelView mv = new ModelView();
 
@@ -79,12 +80,13 @@ public class VoitureController {
         try {
             conn = DatabaseConnection.getConnection();
 
-            String sql = "INSERT INTO voiture (marque, nb_place, type, carburant) VALUES (?, ?, ?, ?)";
+            String sql = "INSERT INTO voiture (marque, nb_place, type, carburant, matricule) VALUES (?, ?, ?, ?, ?)";
             pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, marque.trim());
             pstmt.setInt(2, nbPlace);
             pstmt.setString(3, type.trim());
             pstmt.setString(4, carburant);
+            pstmt.setString(5, matricule != null ? matricule.trim() : null);
 
             pstmt.executeUpdate();
 
@@ -146,7 +148,8 @@ public class VoitureController {
             @MyParam(value = "marque") String marque,
             @MyParam(value = "nbPlace") int nbPlace,
             @MyParam(value = "type") String type,
-            @MyParam(value = "carburant") String carburant) {
+            @MyParam(value = "carburant") String carburant,
+            @MyParam(value = "matricule") String matricule) {
 
         ModelView mv = new ModelView();
 
@@ -173,13 +176,14 @@ public class VoitureController {
         try {
             conn = DatabaseConnection.getConnection();
 
-            String sql = "UPDATE voiture SET marque = ?, nb_place = ?, type = ?, carburant = ? WHERE id = ?";
+            String sql = "UPDATE voiture SET marque = ?, nb_place = ?, type = ?, carburant = ?, matricule = ? WHERE id = ?";
             pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, marque.trim());
             pstmt.setInt(2, nbPlace);
             pstmt.setString(3, type.trim());
             pstmt.setString(4, carburant);
-            pstmt.setInt(5, id);
+            pstmt.setString(5, matricule != null ? matricule.trim() : null);
+            pstmt.setInt(6, id);
 
             int rows = pstmt.executeUpdate();
 
@@ -300,7 +304,8 @@ public class VoitureController {
             @MyParam(value = "marque") String marque,
             @MyParam(value = "nbPlace") int nbPlace,
             @MyParam(value = "type") String type,
-            @MyParam(value = "carburant") String carburant) {
+            @MyParam(value = "carburant") String carburant,
+            @MyParam(value = "matricule") String matricule) {
 
         if (!TokenUtil.isValidToken(token)) {
             return JsonResponse.unauthorized("Token invalide ou expiré");
@@ -317,12 +322,13 @@ public class VoitureController {
 
         try {
             conn = DatabaseConnection.getConnection();
-            String sql = "INSERT INTO voiture (marque, nb_place, type, carburant) VALUES (?, ?, ?, ?)";
+            String sql = "INSERT INTO voiture (marque, nb_place, type, carburant, matricule) VALUES (?, ?, ?, ?, ?)";
             pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, marque.trim());
             pstmt.setInt(2, nbPlace);
             pstmt.setString(3, type.trim());
             pstmt.setString(4, carburant);
+            pstmt.setString(5, matricule != null ? matricule.trim() : null);
             pstmt.executeUpdate();
 
             return JsonResponse.success(null, "Voiture créée avec succès");
@@ -345,7 +351,8 @@ public class VoitureController {
             @MyParam(value = "marque") String marque,
             @MyParam(value = "nbPlace") int nbPlace,
             @MyParam(value = "type") String type,
-            @MyParam(value = "carburant") String carburant) {
+            @MyParam(value = "carburant") String carburant,
+            @MyParam(value = "matricule") String matricule) {
 
         if (!TokenUtil.isValidToken(token)) {
             return JsonResponse.unauthorized("Token invalide ou expiré");
@@ -359,13 +366,14 @@ public class VoitureController {
 
         try {
             conn = DatabaseConnection.getConnection();
-            String sql = "UPDATE voiture SET marque = ?, nb_place = ?, type = ?, carburant = ? WHERE id = ?";
+            String sql = "UPDATE voiture SET marque = ?, nb_place = ?, type = ?, carburant = ?, matricule = ? WHERE id = ?";
             pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, marque.trim());
             pstmt.setInt(2, nbPlace);
             pstmt.setString(3, type.trim());
             pstmt.setString(4, carburant);
-            pstmt.setInt(5, id);
+            pstmt.setString(5, matricule != null ? matricule.trim() : null);
+            pstmt.setInt(6, id);
 
             int rows = pstmt.executeUpdate();
             if (rows > 0) {
@@ -430,7 +438,7 @@ public class VoitureController {
         try {
             conn = DatabaseConnection.getConnection();
             stmt = conn.createStatement();
-            rs = stmt.executeQuery("SELECT id, marque, nb_place, type, carburant FROM voiture ORDER BY id");
+            rs = stmt.executeQuery("SELECT id, marque, nb_place, type, carburant, matricule FROM voiture ORDER BY id");
 
             while (rs.next()) {
                 Voiture v = new Voiture();
@@ -439,6 +447,7 @@ public class VoitureController {
                 v.setNbPlace(rs.getInt("nb_place"));
                 v.setType(rs.getString("type"));
                 v.setCarburant(rs.getString("carburant").charAt(0));
+                v.setMatricule(rs.getString("matricule"));
                 voitures.add(v);
             }
         } finally {
@@ -458,7 +467,7 @@ public class VoitureController {
 
         try {
             conn = DatabaseConnection.getConnection();
-            pstmt = conn.prepareStatement("SELECT id, marque, nb_place, type, carburant FROM voiture WHERE id = ?");
+            pstmt = conn.prepareStatement("SELECT id, marque, nb_place, type, carburant, matricule FROM voiture WHERE id = ?");
             pstmt.setInt(1, id);
             rs = pstmt.executeQuery();
 
@@ -469,6 +478,7 @@ public class VoitureController {
                 v.setNbPlace(rs.getInt("nb_place"));
                 v.setType(rs.getString("type"));
                 v.setCarburant(rs.getString("carburant").charAt(0));
+                v.setMatricule(rs.getString("matricule"));
                 return v;
             }
         } finally {
