@@ -88,7 +88,17 @@
             </div>
 
             <div class="form-group">
-                <label for="idHotel">Hôtel:</label>
+                <label>Lieu de départ :</label>
+                <%
+                    Lieu airport = (Lieu) request.getAttribute("airport");
+                %>
+                <input type="text" value="✈ <%= airport != null ? airport.getCode() : "Aéroport" %> (départ fixe)" readonly
+                       style="background-color:#e8f5e9; color:#2e7d32; font-weight:bold; cursor:default;">
+                <div class="info">* Le véhicule part toujours depuis l'aéroport</div>
+            </div>
+
+            <div class="form-group">
+                <label for="idHotel">Hôtel (lieu d'arrivée) :</label>
                 <select id="idHotel" name="idHotel" required>
                     <option value="">-- Sélectionnez un hôtel --</option>
                     <%
@@ -104,6 +114,7 @@
                         }
                     %>
                 </select>
+                <div class="info">* Les clients sont déposés à leur hôtel</div>
             </div>
 
             <div class="form-group">
@@ -117,23 +128,21 @@
             </div>
 
             <div class="form-group">
-                <label for="idLieuDestination">Lieu de destination :</label>
-                <select id="idLieuDestination" name="idLieuDestination">
-                    <option value="">-- Sélectionner un lieu (optionnel) --</option>
+                <label for="idLieuDestination">Lieu d'arrivée (hôtel / destination) :</label>
+                <select id="idLieuDestination" name="idLieuDestination" required>
+                    <option value="">-- Sélectionner un lieu --</option>
                     <%
                         List<Lieu> lieux = (List<Lieu>) request.getAttribute("lieux");
                         if (lieux != null) {
                             for (Lieu lieu : lieux) {
                     %>
-                    <option value="<%= lieu.getId() %>">
-                        <%= lieu.getCode() %><% if (lieu.isAirport()) { %> (✈ Aéroport)<% } %>
-                    </option>
+                    <option value="<%= lieu.getId() %>">🏨 <%= lieu.getCode() %></option>
                     <%
                             }
                         }
                     %>
                 </select>
-                <div class="info">* Requis pour la planification des véhicules</div>
+                <div class="info">* Lieu de destination du véhicule (toujours un hôtel — l'aéroport n'est pas sélectionnable ici)</div>
             </div>
 
             <input type="submit" value="Enregistrer la réservation">

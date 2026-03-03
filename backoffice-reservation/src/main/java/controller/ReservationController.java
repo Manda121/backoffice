@@ -28,7 +28,8 @@ public class ReservationController {
         
         try {
             mv.addItem("hotels", getAllHotels());
-            mv.addItem("lieux", LieuController.getAllLieux());
+            mv.addItem("lieux", LieuController.getAllNonAirportLieux());
+            mv.addItem("airport", LieuController.getAirportLieu());
         } catch (SQLException e) {
             e.printStackTrace();
             mv.addItem("error", "Erreur lors du chargement des données: " + e.getMessage());
@@ -56,7 +57,8 @@ public class ReservationController {
             mv.addItem("error", "L'ID client doit contenir exactement 4 caractères");
             try {
                 mv.addItem("hotels", getAllHotels());
-                mv.addItem("lieux", LieuController.getAllLieux());
+                mv.addItem("lieux", LieuController.getAllNonAirportLieux());
+                mv.addItem("airport", LieuController.getAirportLieu());
             } catch (SQLException e) {
                 e.printStackTrace();
             }
@@ -98,7 +100,8 @@ public class ReservationController {
             mv.addItem("error", "Erreur lors de l'enregistrement: " + e.getMessage());
             try {
                 mv.addItem("hotels", getAllHotels());
-                mv.addItem("lieux", LieuController.getAllLieux());
+                mv.addItem("lieux", LieuController.getAllNonAirportLieux());
+                mv.addItem("airport", LieuController.getAirportLieu());
             } catch (SQLException ex) {
                 ex.printStackTrace();
             }
