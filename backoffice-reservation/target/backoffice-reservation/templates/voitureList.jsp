@@ -159,6 +159,7 @@
                 <tr>
                     <th>ID</th>
                     <th>Marque</th>
+                    <th>Matricule</th>
                     <th>Nb Places</th>
                     <th>Type</th>
                     <th>Carburant</th>
@@ -172,6 +173,7 @@
                 <tr>
                     <td><%= voiture.getId() %></td>
                     <td><%= voiture.getMarque() %></td>
+                    <td><%= voiture.getMatricule() != null ? voiture.getMatricule() : "-" %></td>
                     <td><%= voiture.getNbPlace() %></td>
                     <td><%= voiture.getType() %></td>
                     <td><%= voiture.getCarburantLabel() %></td>
