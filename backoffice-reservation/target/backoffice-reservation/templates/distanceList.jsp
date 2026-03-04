@@ -5,88 +5,114 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion des Distances</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1 { color: #333; text-align: center; margin-bottom: 25px; }
-        .actions { text-align: right; margin-bottom: 15px; }
-        .btn { padding: 9px 18px; color: white; text-decoration: none; border-radius: 4px; display: inline-block; border: none; cursor: pointer; font-size: 14px; }
-        .btn-add    { background-color: #4CAF50; } .btn-add:hover    { background-color: #45a049; }
-        .btn-edit   { background-color: #2196F3; padding: 5px 12px; } .btn-edit:hover   { background-color: #1976D2; }
-        .btn-delete { background-color: #f44336; padding: 5px 12px; } .btn-delete:hover { background-color: #d32f2f; }
-        .btn-back   { background-color: #757575; } .btn-back:hover   { background-color: #616161; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 11px 14px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #009688; color: white; }
-        tr:hover { background-color: #f9f9f9; }
-        .alert { padding: 12px; margin-bottom: 15px; border-radius: 4px; }
-        .alert-success { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
-        .alert-error   { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
-        .info-box { background: #e3f2fd; border: 1px solid #90caf9; border-radius: 4px; padding: 10px 14px; margin-bottom: 15px; font-size: 13px; color: #1565c0; }
-        .nav-links { margin-top: 20px; }
-        .nav-links a { margin-right: 10px; }
-    </style>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/theme.css">
 </head>
 <body>
-<div class="container">
-    <h1>📏 Gestion des Distances</h1>
+<div class="app-layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <h2>🚗 Réservation</h2>
+            <div class="brand-sub">Back-office</div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">Navigation</div>
+            <a href="${pageContext.request.contextPath}/lieu/list">
+                <span class="nav-icon">📍</span> Lieux
+            </a>
+            <a href="${pageContext.request.contextPath}/distance/list" class="active">
+                <span class="nav-icon">📏</span> Distances
+            </a>
+            <a href="${pageContext.request.contextPath}/voiture/list">
+                <span class="nav-icon">🚐</span> Voitures
+            </a>
+            <div class="nav-section">Opérations</div>
+            <a href="${pageContext.request.contextPath}/reservation/list">
+                <span class="nav-icon">📋</span> Réservations
+            </a>
+            <a href="${pageContext.request.contextPath}/reservation/form">
+                <span class="nav-icon">📝</span> Nouvelle réservation
+            </a>
+            <a href="${pageContext.request.contextPath}/planning/form">
+                <span class="nav-icon">📊</span> Planning
+            </a>
+            <div class="nav-section">Configuration</div>
+            <a href="${pageContext.request.contextPath}/parametre/list">
+                <span class="nav-icon">⚙️</span> Paramètres
+            </a>
+        </nav>
+        <div class="sidebar-footer">© 2026 Réservation</div>
+    </aside>
 
-    <div class="info-box">
-        ℹ️ Contrainte : si la distance <strong>A → B</strong> existe, la distance <strong>B → A</strong> ne peut pas être ajoutée (symétrie).
-    </div>
+    <!-- MAIN -->
+    <div class="main-content">
+        <header class="topbar">
+            <div class="page-title"><span class="title-icon">📏</span> Gestion des Distances</div>
+            <div class="breadcrumb">Accueil / Distances</div>
+        </header>
 
-    <% if (request.getAttribute("success") != null) { %>
-        <div class="alert alert-success"><%= request.getAttribute("success") %></div>
-    <% } %>
-    <% if (request.getAttribute("error") != null) { %>
-        <div class="alert alert-error"><%= request.getAttribute("error") %></div>
-    <% } %>
+        <div class="page-content">
+            <div class="info-box">
+                ℹ️ Contrainte : si la distance <strong>A → B</strong> existe, la distance <strong>B → A</strong> ne peut pas être ajoutée (symétrie).
+            </div>
 
-    <div class="actions">
-        <a href="${pageContext.request.contextPath}/distance/form" class="btn btn-add">+ Ajouter une distance</a>
-    </div>
+            <% if (request.getAttribute("success") != null) { %>
+                <div class="alert alert-success">✅ <%= request.getAttribute("success") %></div>
+            <% } %>
+            <% if (request.getAttribute("error") != null) { %>
+                <div class="alert alert-error">❌ <%= request.getAttribute("error") %></div>
+            <% } %>
 
-    <table>
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>De</th>
-                <th>Vers</th>
-                <th>Distance (km)</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-        <%
-            List<Distance> distances = (List<Distance>) request.getAttribute("distances");
-            if (distances != null && !distances.isEmpty()) {
-                for (Distance d : distances) {
-        %>
-            <tr>
-                <td><%= d.getId() %></td>
-                <td><strong><%= d.getLieuFromCode() %></strong></td>
-                <td><strong><%= d.getLieuToCode() %></strong></td>
-                <td><%= d.getKm() %> km</td>
-                <td>
-                    <a href="${pageContext.request.contextPath}/distance/edit?id=<%= d.getId() %>" class="btn btn-edit">Modifier</a>
-                    <form action="${pageContext.request.contextPath}/distance/delete" method="post" style="display:inline"
-                          onsubmit="return confirm('Supprimer cette distance ?')">
-                        <input type="hidden" name="id" value="<%= d.getId() %>">
-                        <button type="submit" class="btn btn-delete">Supprimer</button>
-                    </form>
-                </td>
-            </tr>
-        <% } } else { %>
-            <tr><td colspan="5" style="text-align:center; color:#999;">Aucune distance enregistrée.</td></tr>
-        <% } %>
-        </tbody>
-    </table>
-
-    <div class="nav-links">
-        <a href="${pageContext.request.contextPath}/voiture/list" class="btn btn-back">🚐 Voitures</a>
-        <a href="${pageContext.request.contextPath}/parametre/list" class="btn btn-back">⚙ Paramètres</a>
-        <a href="${pageContext.request.contextPath}/planning/form" class="btn" style="background:#3f51b5">📊 Planning</a>
+            <div class="card">
+                <div class="card-header">
+                    <h2>Liste des distances</h2>
+                    <a href="${pageContext.request.contextPath}/distance/form" class="btn btn-success">+ Ajouter une distance</a>
+                </div>
+                <div class="card-body">
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>De</th>
+                                    <th>Vers</th>
+                                    <th>Distance (km)</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <%
+                                List<Distance> distances = (List<Distance>) request.getAttribute("distances");
+                                if (distances != null && !distances.isEmpty()) {
+                                    for (Distance d : distances) {
+                            %>
+                                <tr>
+                                    <td><%= d.getId() %></td>
+                                    <td><strong><%= d.getLieuFromCode() %></strong></td>
+                                    <td><strong><%= d.getLieuToCode() %></strong></td>
+                                    <td><%= d.getKm() %> km</td>
+                                    <td>
+                                        <div class="action-cell">
+                                            <a href="${pageContext.request.contextPath}/distance/edit?id=<%= d.getId() %>" class="btn btn-primary btn-sm">Modifier</a>
+                                            <form action="${pageContext.request.contextPath}/distance/delete" method="post" style="display:inline"
+                                                  onsubmit="return confirm('Supprimer cette distance ?')">
+                                                <input type="hidden" name="id" value="<%= d.getId() %>">
+                                                <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <% } } else { %>
+                                <tr><td colspan="5" class="empty-state">Aucune distance enregistrée.</td></tr>
+                            <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 </body>

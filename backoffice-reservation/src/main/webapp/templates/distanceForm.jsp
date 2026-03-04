@@ -6,77 +6,118 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= "edit".equals(request.getAttribute("action")) ? "Modifier" : "Ajouter" %> une Distance</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 520px; margin: 50px auto; padding: 20px; background-color: #f5f5f5; }
-        .form-container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1 { color: #333; text-align: center; }
-        .form-group { margin-bottom: 18px; }
-        label { display: block; margin-bottom: 5px; color: #555; font-weight: bold; }
-        select, input[type="number"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
-        input[type="submit"] { background-color: #009688; color: white; padding: 11px 25px; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; width: 100%; }
-        input[type="submit"]:hover { background-color: #00796b; }
-        .btn-back { display: block; text-align: center; margin-top: 12px; color: #757575; text-decoration: none; }
-        .alert-error { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
-        .info-box { background: #e3f2fd; border: 1px solid #90caf9; border-radius: 4px; padding: 9px 13px; margin-bottom: 15px; font-size: 12px; color: #1565c0; }
-    </style>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/theme.css">
 </head>
 <body>
-<div class="form-container">
-    <%
-        boolean isEdit = "edit".equals(request.getAttribute("action"));
-        Distance dist = (Distance) request.getAttribute("distance");
-        List<Lieu> lieux = (List<Lieu>) request.getAttribute("lieux");
-    %>
-    <h1>📏 <%= isEdit ? "Modifier la distance" : "Nouvelle distance" %></h1>
+<div class="app-layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <h2>🚗 Réservation</h2>
+            <div class="brand-sub">Back-office</div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">Navigation</div>
+            <a href="${pageContext.request.contextPath}/lieu/list">
+                <span class="nav-icon">📍</span> Lieux
+            </a>
+            <a href="${pageContext.request.contextPath}/distance/list" class="active">
+                <span class="nav-icon">📏</span> Distances
+            </a>
+            <a href="${pageContext.request.contextPath}/voiture/list">
+                <span class="nav-icon">🚐</span> Voitures
+            </a>
+            <div class="nav-section">Opérations</div>
+            <a href="${pageContext.request.contextPath}/reservation/list">
+                <span class="nav-icon">📋</span> Réservations
+            </a>
+            <a href="${pageContext.request.contextPath}/reservation/form">
+                <span class="nav-icon">📝</span> Nouvelle réservation
+            </a>
+            <a href="${pageContext.request.contextPath}/planning/form">
+                <span class="nav-icon">📊</span> Planning
+            </a>
+            <div class="nav-section">Configuration</div>
+            <a href="${pageContext.request.contextPath}/parametre/list">
+                <span class="nav-icon">⚙️</span> Paramètres
+            </a>
+        </nav>
+        <div class="sidebar-footer">© 2026 Réservation</div>
+    </aside>
 
-    <div class="info-box">
-        ℹ️ La distance est symétrique. Si A→B est ajouté, B→A ne peut pas l'être.
+    <!-- MAIN -->
+    <div class="main-content">
+        <%
+            boolean isEdit = "edit".equals(request.getAttribute("action"));
+            Distance dist = (Distance) request.getAttribute("distance");
+            List<Lieu> lieux = (List<Lieu>) request.getAttribute("lieux");
+        %>
+        <header class="topbar">
+            <div class="page-title"><span class="title-icon">📏</span> <%= isEdit ? "Modifier la distance" : "Nouvelle distance" %></div>
+            <div class="breadcrumb">Accueil / Distances / <%= isEdit ? "Modifier" : "Ajouter" %></div>
+        </header>
+
+        <div class="page-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2><%= isEdit ? "Modifier la distance" : "Ajouter une nouvelle distance" %></h2>
+                </div>
+                <div class="card-body">
+                    <div class="form-container">
+                        <div class="info-box">
+                            ℹ️ La distance est symétrique. Si A→B est ajouté, B→A ne peut pas l'être.
+                        </div>
+
+                        <% if (request.getAttribute("error") != null) { %>
+                            <div class="alert alert-error">❌ <%= request.getAttribute("error") %></div>
+                        <% } %>
+
+                        <form action="${pageContext.request.contextPath}/distance/<%= isEdit ? "update" : "save" %>" method="post">
+                            <% if (isEdit && dist != null) { %>
+                                <input type="hidden" name="id" value="<%= dist.getId() %>">
+                            <% } %>
+
+                            <div class="form-group">
+                                <label for="lieuFrom">De (lieu de départ) :</label>
+                                <select id="lieuFrom" name="lieuFrom" class="form-control" required>
+                                    <option value="">-- Sélectionnez un lieu --</option>
+                                    <% if (lieux != null) { for (Lieu l : lieux) {
+                                        boolean selected = isEdit && dist != null && dist.getLieuFrom() == l.getId(); %>
+                                    <option value="<%= l.getId() %>" <%= selected ? "selected" : "" %>><%= l.getCode() %></option>
+                                    <% } } %>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="lieuTo">Vers (lieu d'arrivée) :</label>
+                                <select id="lieuTo" name="lieuTo" class="form-control" required>
+                                    <option value="">-- Sélectionnez un lieu --</option>
+                                    <% if (lieux != null) { for (Lieu l : lieux) {
+                                        boolean selected = isEdit && dist != null && dist.getLieuTo() == l.getId(); %>
+                                    <option value="<%= l.getId() %>" <%= selected ? "selected" : "" %>><%= l.getCode() %></option>
+                                    <% } } %>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="km">Distance (km) :</label>
+                                <input type="number" id="km" name="km" class="form-control" step="0.1" min="0.1" required
+                                       value="<%= (isEdit && dist != null) ? dist.getKm() : "" %>">
+                            </div>
+
+                            <div class="form-group">
+                                <button type="submit" class="btn-submit"><%= isEdit ? "Enregistrer les modifications" : "Ajouter la distance" %></button>
+                            </div>
+                        </form>
+
+                        <a href="${pageContext.request.contextPath}/distance/list" class="form-back">← Retour à la liste des distances</a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <% if (request.getAttribute("error") != null) { %>
-        <div class="alert-error"><%= request.getAttribute("error") %></div>
-    <% } %>
-
-    <form action="${pageContext.request.contextPath}/distance/<%= isEdit ? "update" : "save" %>" method="post">
-        <% if (isEdit && dist != null) { %>
-            <input type="hidden" name="id" value="<%= dist.getId() %>">
-        <% } %>
-
-        <div class="form-group">
-            <label for="lieuFrom">De (lieu de départ) :</label>
-            <select id="lieuFrom" name="lieuFrom" required>
-                <option value="">-- Sélectionnez un lieu --</option>
-                <% if (lieux != null) { for (Lieu l : lieux) {
-                    boolean selected = isEdit && dist != null && dist.getLieuFrom() == l.getId(); %>
-                <option value="<%= l.getId() %>" <%= selected ? "selected" : "" %>><%= l.getCode() %></option>
-                <% } } %>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label for="lieuTo">Vers (lieu d'arrivée) :</label>
-            <select id="lieuTo" name="lieuTo" required>
-                <option value="">-- Sélectionnez un lieu --</option>
-                <% if (lieux != null) { for (Lieu l : lieux) {
-                    boolean selected = isEdit && dist != null && dist.getLieuTo() == l.getId(); %>
-                <option value="<%= l.getId() %>" <%= selected ? "selected" : "" %>><%= l.getCode() %></option>
-                <% } } %>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label for="km">Distance (km) :</label>
-            <input type="number" id="km" name="km" step="0.1" min="0.1" required
-                   value="<%= (isEdit && dist != null) ? dist.getKm() : "" %>">
-        </div>
-
-        <div class="form-group">
-            <input type="submit" value="<%= isEdit ? "Enregistrer les modifications" : "Ajouter la distance" %>">
-        </div>
-    </form>
-
-    <a href="${pageContext.request.contextPath}/distance/list" class="btn-back">← Retour à la liste des distances</a>
 </div>
 </body>
 </html>
