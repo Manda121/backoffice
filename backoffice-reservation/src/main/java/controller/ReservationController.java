@@ -28,7 +28,8 @@ public class ReservationController {
         
         try {
             mv.addItem("hotels", getAllHotels());
-            mv.addItem("lieux", LieuController.getAllLieux());
+            mv.addItem("lieux", LieuController.getAllNonAirportLieux());
+            mv.addItem("airport", LieuController.getAirportLieu());
         } catch (SQLException e) {
             e.printStackTrace();
             mv.addItem("error", "Erreur lors du chargement des données: " + e.getMessage());
@@ -45,8 +46,7 @@ public class ReservationController {
             @MyParam(value = "idClient") String idClient,
             @MyParam(value = "idHotel") int idHotel,
             @MyParam(value = "nbPassager") int nbPassager,
-            @MyParam(value = "dateHeureArrivee") String dateHeureArrivee,
-            @MyParam(value = "idLieuDestination") String idLieuDestStr) {
+            @MyParam(value = "dateHeureArrivee") String dateHeureArrivee) {
         
         ModelView mv = new ModelView();
         
@@ -56,7 +56,7 @@ public class ReservationController {
             mv.addItem("error", "L'ID client doit contenir exactement 4 caractères");
             try {
                 mv.addItem("hotels", getAllHotels());
-                mv.addItem("lieux", LieuController.getAllLieux());
+                mv.addItem("airport", LieuController.getAirportLieu());
             } catch (SQLException e) {
                 e.printStackTrace();
             }
@@ -72,21 +72,14 @@ public class ReservationController {
             // Convertir la date string en Timestamp
             Timestamp timestamp = Timestamp.valueOf(dateHeureArrivee.replace("T", " ") + ":00");
             
-            String sql = "INSERT INTO reservation (id_client, id_hotel, nb_passager, date_heure_arrivee, id_lieu_destination) " +
-                         "VALUES (?, ?, ?, ?, ?)";
-
-            Integer idLieu = null;
-            if (idLieuDestStr != null && !idLieuDestStr.trim().isEmpty()) {
-                try { idLieu = Integer.parseInt(idLieuDestStr.trim()); } catch (NumberFormatException ignored) {}
-            }
+            String sql = "INSERT INTO reservation (id_client, id_hotel, nb_passager, date_heure_arrivee) " +
+                         "VALUES (?, ?, ?, ?)";
 
             pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, idClient);
             pstmt.setInt(2, idHotel);
             pstmt.setInt(3, nbPassager);
             pstmt.setTimestamp(4, timestamp);
-            if (idLieu != null) pstmt.setInt(5, idLieu);
-            else pstmt.setNull(5, java.sql.Types.INTEGER);
 
             pstmt.executeUpdate();
             
@@ -98,7 +91,7 @@ public class ReservationController {
             mv.addItem("error", "Erreur lors de l'enregistrement: " + e.getMessage());
             try {
                 mv.addItem("hotels", getAllHotels());
-                mv.addItem("lieux", LieuController.getAllLieux());
+                mv.addItem("airport", LieuController.getAirportLieu());
             } catch (SQLException ex) {
                 ex.printStackTrace();
             }
@@ -173,7 +166,7 @@ public class ReservationController {
         try {
             conn = DatabaseConnection.getConnection();
             stmt = conn.createStatement();
-            rs = stmt.executeQuery("SELECT id, name, ville, adresse FROM hotel ORDER BY name");
+            rs = stmt.executeQuery("SELECT id, name, ville, adresse FROM hotel WHERE COALESCE(is_airport, FALSE) = FALSE ORDER BY name");
             
             while (rs.next()) {
                 Hotel hotel = new Hotel();
@@ -206,11 +199,9 @@ public class ReservationController {
             stmt = conn.createStatement();
             
             String sql = "SELECT r.id, r.id_client, r.id_hotel, r.nb_passager, r.date_heure_arrivee, " +
-                         "h.name as hotel_name, h.ville as hotel_ville, " +
-                         "r.id_lieu_destination, l.code AS lieu_code " +
+                         "h.name as hotel_name, h.ville as hotel_ville " +
                          "FROM reservation r " +
                          "JOIN hotel h ON r.id_hotel = h.id " +
-                         "LEFT JOIN lieu l ON l.id = r.id_lieu_destination " +
                          "ORDER BY r.date_heure_arrivee DESC";
 
             rs = stmt.executeQuery(sql);
@@ -224,8 +215,6 @@ public class ReservationController {
                 reservation.setDateHeureArrivee(rs.getTimestamp("date_heure_arrivee"));
                 reservation.setHotelName(rs.getString("hotel_name"));
                 reservation.setHotelVille(rs.getString("hotel_ville"));
-                reservation.setIdLieuDestination(rs.getInt("id_lieu_destination"));
-                reservation.setLieuCode(rs.getString("lieu_code"));
                 reservations.add(reservation);
             }
         } finally {

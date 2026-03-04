@@ -1,6 +1,6 @@
 -- ============================================================
--- SPRINT 2 : Système d'assignation de réservations aux véhicules
--- À exécuter APRÈS create_reservation.sql et create_car_and_token.sql
+-- SPRINT 2+3 : Système d'assignation de réservations aux véhicules
+-- La table lieu est remplacée par des colonnes code/is_airport dans hotel
 -- ============================================================
 
 \c reservation;
@@ -9,21 +9,24 @@
 ALTER TABLE voiture ADD COLUMN IF NOT EXISTS matricule VARCHAR(50);
 
 -- --------------------------------------------------------
--- Table LIEU : points de départ/arrivée (hôtels, aéroport…)
+-- Ajout de code et is_airport dans hotel (remplace la table lieu)
 -- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS lieu (
-    id         SERIAL PRIMARY KEY,
-    code       VARCHAR(100) NOT NULL UNIQUE,
-    is_airport BOOLEAN NOT NULL DEFAULT FALSE
-);
+ALTER TABLE hotel ADD COLUMN IF NOT EXISTS code VARCHAR(100) UNIQUE;
+ALTER TABLE hotel ADD COLUMN IF NOT EXISTS is_airport BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Nettoyage de l'ancienne structure si elle existait (migration)
+ALTER TABLE reservation DROP COLUMN IF EXISTS id_lieu_destination;
+DROP TABLE IF EXISTS distance CASCADE;
+DROP TABLE IF EXISTS lieu CASCADE;
 
 -- --------------------------------------------------------
--- Table DISTANCE : distances entre lieux (sans redondance)
+-- Table DISTANCE : distances entre hôtels (sans redondance)
+-- Utilise maintenant hotel(id) au lieu de lieu(id)
 -- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS distance (
     id         SERIAL PRIMARY KEY,
-    lieu_from  INT NOT NULL REFERENCES lieu(id) ON DELETE CASCADE,
-    lieu_to    INT NOT NULL REFERENCES lieu(id) ON DELETE CASCADE,
+    lieu_from  INT NOT NULL REFERENCES hotel(id) ON DELETE CASCADE,
+    lieu_to    INT NOT NULL REFERENCES hotel(id) ON DELETE CASCADE,
     km         DECIMAL(10,2) NOT NULL,
     CONSTRAINT chk_no_self_distance CHECK (lieu_from <> lieu_to)
 );
@@ -42,8 +45,3 @@ CREATE TABLE IF NOT EXISTS parametre (
     description VARCHAR(500)
 );
 
--- --------------------------------------------------------
--- Modification de RESERVATION : ajout du lieu de destination
--- --------------------------------------------------------
-ALTER TABLE reservation
-    ADD COLUMN IF NOT EXISTS id_lieu_destination INT REFERENCES lieu(id) ON DELETE SET NULL;

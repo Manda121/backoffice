@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="java.util.List" %>
+<%@ page import="java.text.SimpleDateFormat" %>
 <%@ page import="models.PlanningEntry" %>
 <%@ page import="models.Reservation" %>
 <%@ page import="models.Voiture" %>
@@ -167,8 +168,7 @@
         <% if (planning.isEmpty()) { %>
             <div class="empty-state">
                 <div class="icon">🗓</div>
-                <p>Aucune réservation avec lieu de destination pour ce jour.</p>
-                <p style="font-size:13px; color:#bbb;">Vérifiez que les réservations ont un lieu de destination assigné.</p>
+                <p>Aucune réservation pour ce jour.</p>
             </div>
         <% } else { %>
 
@@ -177,9 +177,10 @@
                 <tr>
                     <th>Véhicule</th>
                     <th>Réservations</th>
-                    <th>Départ</th>
-                    <th>Arrivée</th>
+                    <th>Départ (✈ Aéroport)</th>
+                    <th>Arrivée hôtel / Retour ✈</th>
                     <th>Passagers / Capacité</th>
+                    <th>Distance</th>
                 </tr>
             </thead>
             <tbody>
@@ -204,13 +205,21 @@
                     <% } %>
                     <div class="res-detail">
                     <% for (Reservation r : entry.getReservations()) { %>
-                        R<%= r.getId() %> : <%= r.getNbPassager() %> pax
+                        R<%= r.getId() %> : <%= r.getNbPassager() %> passagers
                         <% if (r.getLieuCode() != null) { %>&rarr; <%= r.getLieuCode() %><% } %><br>
                     <% } %>
                     </div>
                 </td>
-                <td><span class="time-depart">⬆ <%= entry.getDepartureFormatted() %></span></td>
-                <td><span class="time-arrivee">⬇ <%= entry.getArrivalFormatted() %></span></td>
+                <td><span class="time-depart">✈ Départ : <%= entry.getDepartureFormatted() %></span></td>
+                <td>
+                    <span class="time-arrivee">🏨 Hôtel : <%= entry.getArrivalFormatted() %></span><br>
+                    <span style="color:#1565c0; font-weight:bold; font-size:15px;">✈ Aéroport : <%= entry.getReturnToAirportFormatted() %></span>
+                    <div style="font-size:11px; color:#999; margin-top:3px;">Disponible à partir de <%= entry.getReturnToAirportFormatted() %></div>
+                </td>
+                <td>
+                    <strong><%= String.format("%.0f", entry.getTotalKm()) %> km</strong>
+                    <div style="font-size:11px; color:#999;">trajet complet</div>
+                </td>
                 <td>
                     <%= passTotal %> / <%= capacity %> places
                     <div class="cap-bar-wrap">
@@ -225,13 +234,46 @@
         <% } %>
     </div>
 
+    <%
+        List<Reservation> unassigned = (List<Reservation>) request.getAttribute("unassigned");
+        if (unassigned != null && !unassigned.isEmpty()) {
+            SimpleDateFormat sdfU = new SimpleDateFormat("HH'h'mm");
+    %>
+    <div class="card" style="border-top:3px solid #e65100;">
+        <h2 style="color:#e65100;">&#9888;&#65039; Réservations non assignées (<%= unassigned.size() %>)</h2>
+        <table class="planning-table">
+            <thead>
+                <tr>
+                    <th style="background-color:#e65100;">ID</th>
+                    <th style="background-color:#e65100;">Client</th>
+                    <th style="background-color:#e65100;">Hôtel de destination</th>
+                    <th style="background-color:#e65100;">Passagers</th>
+                    <th style="background-color:#e65100;">Heure prévue</th>
+                    <th style="background-color:#e65100;">Raison</th>
+                </tr>
+            </thead>
+            <tbody>
+            <% for (Reservation r : unassigned) { %>
+                <tr style="background-color:#fff3e0;">
+                    <td><strong style="color:#e65100;">R<%= r.getId() %></strong></td>
+                    <td><%= r.getIdClient() %></td>
+                    <td><%= r.getLieuCode() != null ? r.getLieuCode() : "Hôtel #" + r.getIdHotel() %></td>
+                    <td><%= r.getNbPassager() %> passager(s)</td>
+                    <td><%= sdfU.format(r.getDateHeureArrivee()) %></td>
+                    <td style="color:#c62828;"><%= r.getUnassignedReason() != null ? r.getUnassignedReason() : "Non assigné" %></td>
+                </tr>
+            <% } %>
+            </tbody>
+        </table>
+    </div>
+    <% } %>
+
     <% } %>
 
     <div class="nav-links">
         <a href="${pageContext.request.contextPath}/reservation/form">📝 Nouvelle réservation</a>
         <a href="${pageContext.request.contextPath}/reservation/list">📋 Réservations</a>
         <a href="${pageContext.request.contextPath}/voiture/list">🚐 Voitures</a>
-        <a href="${pageContext.request.contextPath}/lieu/list">📍 Lieux</a>
         <a href="${pageContext.request.contextPath}/distance/list">📏 Distances</a>
         <a href="${pageContext.request.contextPath}/parametre/list">⚙ Paramètres</a>
     </div>

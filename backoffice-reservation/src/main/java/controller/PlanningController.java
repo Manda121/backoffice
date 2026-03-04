@@ -62,10 +62,12 @@ public class PlanningController {
             }
 
             // --- Algorithme d'assignation ---
+            List<Reservation> unassigned = new ArrayList<>();
             List<PlanningEntry> planning = assignReservations(
-                    reservations, voitures, tempsAttenteMin, vitesseKmH, airportId);
+                    reservations, voitures, vitesseKmH, airportId, unassigned);
 
             mv.addItem("planning", planning);
+            mv.addItem("unassigned", unassigned);
             mv.addItem("totalReservations", reservations.size());
             mv.addItem("tempsAttente", tempsAttenteMin);
             mv.addItem("vitesse", vitesseKmH);
@@ -93,9 +95,9 @@ public class PlanningController {
     private List<PlanningEntry> assignReservations(
             List<Reservation> reservations,
             List<Voiture> voitures,
-            int tempsAttenteMin,
             double vitesseKmH,
-            int airportId) throws SQLException {
+            int airportId,
+            List<Reservation> unassigned) throws SQLException {
 
         List<PlanningEntry> entries = new ArrayList<>();
         boolean[] assigned = new boolean[reservations.size()];
@@ -111,7 +113,7 @@ public class PlanningController {
 
             Reservation premiere = reservations.get(i);
             LocalDateTime premierTemps = premiere.getDateHeureArrivee().toLocalDateTime();
-            LocalDateTime depart       = premierTemps.plusMinutes(tempsAttenteMin);
+            LocalDateTime depart       = premierTemps;
 
             // --- Collecter les réservations candidates dans la fenêtre d'attente ---
             List<Integer> candidatsIdx = new ArrayList<>();
@@ -139,11 +141,18 @@ public class PlanningController {
             if (selectionne == null) {
                 selectionne = selectMeilleurVehicule(disponibles, premiere.getNbPassager());
             }
-            // Dernier recours : ignorer la disponibilité
+            // Si toujours null : aucun véhicule disponible → réservation non assignée
             if (selectionne == null) {
-                selectionne = selectMeilleurVehicule(voitures, premiere.getNbPassager());
+                boolean capaciteInsuffisante = voitures.stream().noneMatch(v -> v.getNbPlace() >= premiere.getNbPassager());
+                String timeStr = String.format("%dh%02d", depart.getHour(), depart.getMinute());
+                String reason = capaciteInsuffisante
+                        ? "Capacité insuffisante (" + premiere.getNbPassager() + " passager(s) requis, max disponible : "
+                          + voitures.stream().mapToInt(Voiture::getNbPlace).max().orElse(0) + " places)"
+                        : "Aucun véhicule disponible à " + timeStr;
+                premiere.setUnassignedReason(reason);
+                unassigned.add(premiere);
+                continue;
             }
-            if (selectionne == null) continue; // Impossible d'assigner
 
             // --- Constituer le lot final (greedy selon la capacité du véhicule choisi) ---
             List<Reservation> lot = new ArrayList<>();
@@ -160,19 +169,72 @@ public class PlanningController {
                 }
             }
 
-            // --- Calculer les horaires ---
-            double km = DistanceController.getKmBetween(airportId, premiere.getIdLieuDestination());
-            long dureeMinutes = vitesseKmH > 0 ? (long)((km / vitesseKmH) * 60) : 0;
+            // --- Calculer les horaires et la distance du trajet complet ---
+            double[] route = calculateRoute(lot, airportId, vitesseKmH);
+            double totalRouteKm    = route[0];
+            long minsToLastHotel   = (long) route[1];
+            long totalRouteMinutes = (long) route[2];
 
-            LocalDateTime arrivee        = depart.plusMinutes(dureeMinutes);
-            LocalDateTime retourAeroport = arrivee.plusMinutes(dureeMinutes); // trajet retour
+            LocalDateTime arrivee        = depart.plusMinutes(minsToLastHotel);
+            LocalDateTime retourAeroport = depart.plusMinutes(totalRouteMinutes);
 
             disponibleA.put(selectionne.getId(), retourAeroport);
 
-            entries.add(new PlanningEntry(selectionne, lot, depart, arrivee));
+            entries.add(new PlanningEntry(selectionne, lot, depart, arrivee, retourAeroport, totalRouteKm));
         }
 
         return entries;
+    }
+
+    /**
+     * Calcule le trajet complet pour un lot de réservations.
+     * Hôtels visités du plus proche au plus éloigné de l'aéroport.
+     * Retourne [totalKm, minutesJusquAuDernierHotel, totalMinutesAllerRetour]
+     */
+    private double[] calculateRoute(List<Reservation> lot, int airportId, double vitesseKmH) throws SQLException {
+        // Hôtels distincts du lot
+        List<Integer> hotelIds = lot.stream()
+                .map(Reservation::getIdHotel)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (hotelIds.isEmpty()) return new double[]{0, 0, 0};
+
+        // Distances depuis l'aéroport pour chaque hôtel
+        Map<Integer, Double> distFromAirport = new HashMap<>();
+        for (int hId : hotelIds) {
+            distFromAirport.put(hId, DistanceController.getKmBetween(airportId, hId));
+        }
+
+        // Trier par distance depuis l'aéroport (plus proche en premier)
+        hotelIds.sort(Comparator.comparingDouble(distFromAirport::get));
+
+        double totalKm = 0;
+        double minutesToLastHotel = 0;
+        int prevId = airportId;
+
+        for (int hId : hotelIds) {
+            double legKm;
+            if (prevId == airportId) {
+                // Premier trajet : aéroport → hôtel le plus proche
+                legKm = distFromAirport.get(hId);
+            } else {
+                // Distance directe si dispos dans la table, sinon soustraction des distances depuis l'aéroport
+                double direct = DistanceController.getKmBetween(prevId, hId);
+                legKm = direct > 0 ? direct
+                        : Math.abs(distFromAirport.get(hId) - distFromAirport.get(prevId));
+            }
+            totalKm += legKm;
+            minutesToLastHotel += vitesseKmH > 0 ? (legKm / vitesseKmH) * 60 : 0;
+            prevId = hId;
+        }
+
+        // Retour à l'aéroport depuis le dernier hôtel
+        double returnKm = distFromAirport.get(hotelIds.get(hotelIds.size() - 1));
+        totalKm += returnKm;
+        double totalMinutes = minutesToLastHotel + (vitesseKmH > 0 ? (returnKm / vitesseKmH) * 60 : 0);
+
+        return new double[]{totalKm, minutesToLastHotel, totalMinutes};
     }
 
     /**
@@ -209,11 +271,10 @@ public class PlanningController {
     private List<Reservation> getReservationsForDate(String date) throws SQLException {
         List<Reservation> list = new ArrayList<>();
         String sql = "SELECT r.id, r.id_client, r.id_hotel, r.nb_passager, r.date_heure_arrivee, " +
-                     "r.id_lieu_destination, l.code AS lieu_code " +
+                     "h.code AS lieu_code " +
                      "FROM reservation r " +
-                     "LEFT JOIN lieu l ON l.id = r.id_lieu_destination " +
+                     "JOIN hotel h ON h.id = r.id_hotel " +
                      "WHERE DATE(r.date_heure_arrivee) = ? " +
-                     "   AND r.id_lieu_destination IS NOT NULL " +
                      "ORDER BY r.date_heure_arrivee";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -226,7 +287,6 @@ public class PlanningController {
                     r.setIdHotel(rs.getInt("id_hotel"));
                     r.setNbPassager(rs.getInt("nb_passager"));
                     r.setDateHeureArrivee(rs.getTimestamp("date_heure_arrivee"));
-                    r.setIdLieuDestination(rs.getInt("id_lieu_destination"));
                     r.setLieuCode(rs.getString("lieu_code"));
                     list.add(r);
                 }
@@ -253,13 +313,7 @@ public class PlanningController {
     private int getAirportId() throws SQLException {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "SELECT id FROM lieu WHERE is_airport = TRUE LIMIT 1");
-             ResultSet rs = ps.executeQuery()) {
-            if (rs.next()) return rs.getInt("id");
-        }
-        // Fallback : premier lieu
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT id FROM lieu ORDER BY id LIMIT 1");
+                     "SELECT id FROM hotel WHERE is_airport = TRUE LIMIT 1");
              ResultSet rs = ps.executeQuery()) {
             if (rs.next()) return rs.getInt("id");
         }
