@@ -54,6 +54,37 @@ public class FrontServlet extends HttpServlet {
         resp.setContentType("text/html");
 
         String url = extractUrlPath(req);
+
+        // --- static resource handling ------------------------------------------------
+        // The FrontServlet is mapped to "/" which also intercepts requests for
+        // static assets (CSS, JS, images, etc.). Forwarding to the same path causes
+        // the servlet to re-enter itself, leading to infinite recursion and a 500
+        // error. To avoid that we read the resource directly from the webapp and
+        // stream it to the response, setting an appropriate content type.
+        if (url.startsWith("/css/") || url.startsWith("/js/") || url.startsWith("/img/")
+                || url.startsWith("/images/") || url.startsWith("/fonts/")) {
+            jakarta.servlet.ServletContext ctx = req.getServletContext();
+            try (java.io.InputStream in = ctx.getResourceAsStream(url)) {
+                if (in == null) {
+                    resp.sendError(HttpServletResponse.SC_NOT_FOUND);
+                    return;
+                }
+                String mime = ctx.getMimeType(url);
+                if (mime == null) {
+                    mime = "application/octet-stream";
+                }
+                resp.setContentType(mime);
+                byte[] buffer = new byte[4096];
+                int len;
+                java.io.OutputStream out = resp.getOutputStream();
+                while ((len = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, len);
+                }
+            }
+            return;
+        }
+        // -----------------------------------------------------------------------------
+
         Map<String, Map<String, Method>> urlMapping = getUrlMapping(req);
 
         if (urlMapping == null) {
