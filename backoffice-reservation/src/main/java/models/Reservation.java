@@ -89,4 +89,9 @@ public class Reservation {
 
     public String getLieuCode() { return lieuCode; }
     public void setLieuCode(String lieuCode) { this.lieuCode = lieuCode; }
+
+    // Raison de non-assignation (non persisté en base)
+    private String unassignedReason;
+    public String getUnassignedReason() { return unassignedReason; }
+    public void setUnassignedReason(String reason) { this.unassignedReason = reason; }
 }

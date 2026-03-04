@@ -15,17 +15,22 @@ public class PlanningEntry {
     private Voiture voiture;
     private List<Reservation> reservations;
     private LocalDateTime departureTime;
-    private LocalDateTime arrivalTime;
+    private LocalDateTime arrivalTime;           // arrivée à l'hôtel
+    private LocalDateTime returnToAirportTime;   // retour à l'aéroport
+    private double km;                           // distance aller (one-way)
 
     public PlanningEntry() {
     }
 
     public PlanningEntry(Voiture voiture, List<Reservation> reservations,
-                         LocalDateTime departureTime, LocalDateTime arrivalTime) {
+                         LocalDateTime departureTime, LocalDateTime arrivalTime,
+                         LocalDateTime returnToAirportTime, double km) {
         this.voiture = voiture;
         this.reservations = reservations;
         this.departureTime = departureTime;
         this.arrivalTime = arrivalTime;
+        this.returnToAirportTime = returnToAirportTime;
+        this.km = km;
     }
 
     public Voiture getVoiture() { return voiture; }
@@ -45,10 +50,24 @@ public class PlanningEntry {
         return departureTime != null ? departureTime.format(FMT) : "-";
     }
 
-    /** Heure d'arrivée formatée (ex: 14h30) */
+    /** Heure d'arrivée à l'hôtel formatée (ex: 14h30) */
     public String getArrivalFormatted() {
         return arrivalTime != null ? arrivalTime.format(FMT) : "-";
     }
+
+    /** Heure de retour à l'aéroport formatée */
+    public String getReturnToAirportFormatted() {
+        return returnToAirportTime != null ? returnToAirportTime.format(FMT) : "-";
+    }
+
+    public LocalDateTime getReturnToAirportTime() { return returnToAirportTime; }
+    public void setReturnToAirportTime(LocalDateTime t) { this.returnToAirportTime = t; }
+
+    public double getKm() { return km; }
+    public void setKm(double km) { this.km = km; }
+
+    /** Distance totale du trajet complet (aéroport → hôtels → aéroport) */
+    public double getTotalKm() { return km; }
 
     /** Nombre total de passagers dans ce groupe */
     public int getTotalPassagers() {

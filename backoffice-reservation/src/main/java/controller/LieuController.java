@@ -180,7 +180,8 @@ public class LieuController {
     public static List<Lieu> getAllLieux() throws SQLException {
         List<Lieu> lieux = new ArrayList<>();
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT id, code, is_airport FROM lieu ORDER BY code");
+             PreparedStatement ps = conn.prepareStatement(
+                     "SELECT id, code, is_airport FROM hotel WHERE code IS NOT NULL ORDER BY code");
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 lieux.add(new Lieu(rs.getInt("id"), rs.getString("code"), rs.getBoolean("is_airport")));
@@ -193,10 +194,10 @@ public class LieuController {
         List<Lieu> lieux = new ArrayList<>();
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "SELECT id, code, is_airport FROM lieu WHERE is_airport = FALSE ORDER BY code");
+                     "SELECT id, code, is_airport FROM hotel WHERE COALESCE(is_airport, FALSE) = FALSE AND code IS NOT NULL ORDER BY code");
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                lieux.add(new Lieu(rs.getInt("id"), rs.getString("code"), rs.getBoolean("is_airport")));
+                lieux.add(new Lieu(rs.getInt("id"), rs.getString("code"), false));
             }
         }
         return lieux;
@@ -205,7 +206,7 @@ public class LieuController {
     public static Lieu getAirportLieu() throws SQLException {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "SELECT id, code, is_airport FROM lieu WHERE is_airport = TRUE LIMIT 1");
+                     "SELECT id, code, is_airport FROM hotel WHERE is_airport = TRUE LIMIT 1");
              ResultSet rs = ps.executeQuery()) {
             if (rs.next()) {
                 return new Lieu(rs.getInt("id"), rs.getString("code"), true);

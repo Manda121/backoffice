@@ -202,11 +202,11 @@ public class DistanceController {
     // ========================
     public static List<Distance> getAllDistances() throws SQLException {
         List<Distance> list = new ArrayList<>();
-        String sql = "SELECT d.id, d.lieu_from, d.lieu_to, d.km, l1.code AS from_code, l2.code AS to_code " +
+        String sql = "SELECT d.id, d.lieu_from, d.lieu_to, d.km, h1.code AS from_code, h2.code AS to_code " +
                      "FROM distance d " +
-                     "JOIN lieu l1 ON l1.id = d.lieu_from " +
-                     "JOIN lieu l2 ON l2.id = d.lieu_to " +
-                     "ORDER BY l1.code, l2.code";
+                     "JOIN hotel h1 ON h1.id = d.lieu_from " +
+                     "JOIN hotel h2 ON h2.id = d.lieu_to " +
+                     "ORDER BY h1.code, h2.code";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -222,10 +222,10 @@ public class DistanceController {
     }
 
     private Distance getDistanceById(int id) throws SQLException {
-        String sql = "SELECT d.id, d.lieu_from, d.lieu_to, d.km, l1.code AS from_code, l2.code AS to_code " +
+        String sql = "SELECT d.id, d.lieu_from, d.lieu_to, d.km, h1.code AS from_code, h2.code AS to_code " +
                      "FROM distance d " +
-                     "JOIN lieu l1 ON l1.id = d.lieu_from " +
-                     "JOIN lieu l2 ON l2.id = d.lieu_to " +
+                     "JOIN hotel h1 ON h1.id = d.lieu_from " +
+                     "JOIN hotel h2 ON h2.id = d.lieu_to " +
                      "WHERE d.id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

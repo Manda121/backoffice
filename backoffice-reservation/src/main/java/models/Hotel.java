@@ -5,6 +5,8 @@ public class Hotel {
     private String name;
     private String ville;
     private String adresse;
+    private String code;
+    private boolean isAirport;
 
     public Hotel() {
     }
@@ -47,4 +49,10 @@ public class Hotel {
     public void setAdresse(String adresse) {
         this.adresse = adresse;
     }
+
+    public String getCode() { return code; }
+    public void setCode(String code) { this.code = code; }
+
+    public boolean isAirport() { return isAirport; }
+    public void setAirport(boolean airport) { isAirport = airport; }
 }

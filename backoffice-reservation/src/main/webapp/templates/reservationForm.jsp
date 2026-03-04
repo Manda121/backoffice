@@ -119,30 +119,12 @@
 
             <div class="form-group">
                 <label for="nbPassager">Nombre de passagers:</label>
-                <input type="number" id="nbPassager" name="nbPassager" min="1" max="20" required>
+                <input type="number" id="nbPassager" name="nbPassager" min="1" max="100" required>
             </div>
 
             <div class="form-group">
                 <label for="dateHeureArrivee">Date et heure d'arrivée:</label>
                 <input type="datetime-local" id="dateHeureArrivee" name="dateHeureArrivee" required>
-            </div>
-
-            <div class="form-group">
-                <label for="idLieuDestination">Lieu d'arrivée (hôtel / destination) :</label>
-                <select id="idLieuDestination" name="idLieuDestination" required>
-                    <option value="">-- Sélectionner un lieu --</option>
-                    <%
-                        List<Lieu> lieux = (List<Lieu>) request.getAttribute("lieux");
-                        if (lieux != null) {
-                            for (Lieu lieu : lieux) {
-                    %>
-                    <option value="<%= lieu.getId() %>">🏨 <%= lieu.getCode() %></option>
-                    <%
-                            }
-                        }
-                    %>
-                </select>
-                <div class="info">* Lieu de destination du véhicule (toujours un hôtel — l'aéroport n'est pas sélectionnable ici)</div>
             </div>
 
             <input type="submit" value="Enregistrer la réservation">

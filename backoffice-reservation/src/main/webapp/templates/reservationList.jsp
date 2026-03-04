@@ -106,7 +106,6 @@
                     <th>ID Client</th>
                     <th>Hôtel</th>
                     <th>Ville</th>
-                    <th>Lieu destination</th>
                     <th>Nb Passagers</th>
                     <th>Date Arrivée</th>
                 </tr>
@@ -120,7 +119,6 @@
                     <td><%= reservation.getIdClient() %></td>
                     <td><%= reservation.getHotelName() %></td>
                     <td><%= reservation.getHotelVille() %></td>
-                    <td><%= reservation.getLieuCode() != null ? reservation.getLieuCode() : "-" %></td>
                     <td><%= reservation.getNbPassager() %></td>
                     <td><%= sdf.format(reservation.getDateHeureArrivee()) %></td>
                 </tr>
@@ -143,9 +141,9 @@
                style="padding:10px 20px; background:#3f51b5; color:white; text-decoration:none; border-radius:4px;">
                 📊 Planning des véhicules
             </a>
-            <a href="${pageContext.request.contextPath}/lieu/list"
+            <a href="${pageContext.request.contextPath}/distance/list"
                style="padding:10px 20px; background:#757575; color:white; text-decoration:none; border-radius:4px; margin-left:8px;">
-                📍 Lieux &amp; distances
+                📏 Distances
             </a>
         </div>
     </div>

@@ -84,7 +84,7 @@
     </table>
 
     <div class="nav-links">
-        <a href="${pageContext.request.contextPath}/lieu/list" class="btn btn-back">📍 Lieux</a>
+        <a href="${pageContext.request.contextPath}/voiture/list" class="btn btn-back">🚐 Voitures</a>
         <a href="${pageContext.request.contextPath}/parametre/list" class="btn btn-back">⚙ Paramètres</a>
         <a href="${pageContext.request.contextPath}/planning/form" class="btn" style="background:#3f51b5">📊 Planning</a>
     </div>
