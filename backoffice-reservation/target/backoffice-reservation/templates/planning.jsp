@@ -8,276 +8,229 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Planning des Véhicules</title>
-    <style>
-        * { box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f0f4f8; }
-        .container { max-width: 1100px; margin: 0 auto; }
-
-        /* Header */
-        .page-header {
-            background: linear-gradient(135deg, #3f51b5, #283593);
-            color: white; padding: 28px 30px; border-radius: 10px;
-            margin-bottom: 25px; text-align: center;
-        }
-        .page-header h1 { margin: 0 0 8px; font-size: 26px; }
-        .page-header p  { margin: 0; opacity: 0.85; }
-
-        /* Card */
-        .card { background: white; padding: 24px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 22px; }
-        .card h2 { margin-top: 0; color: #3f51b5; font-size: 18px; }
-
-        /* Form */
-        .form-inline { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-        .form-inline .form-group { display: flex; flex-direction: column; }
-        .form-inline label { font-size: 13px; color: #555; margin-bottom: 4px; font-weight: bold; }
-        .form-inline input[type="date"] {
-            padding: 10px 14px; border: 1px solid #ddd; border-radius: 4px; font-size: 15px;
-        }
-        .btn-compute {
-            padding: 10px 24px; background-color: #3f51b5; color: white;
-            border: none; border-radius: 4px; cursor: pointer; font-size: 15px;
-        }
-        .btn-compute:hover { background-color: #303f9f; }
-
-        /* Alert */
-        .alert { padding: 12px 16px; margin-bottom: 18px; border-radius: 4px; }
-        .alert-error   { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
-        .alert-info    { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
-
-        /* Summary bar */
-        .summary-bar {
-            display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px;
-        }
-        .summary-item {
-            background: #f5f5f5; border-radius: 6px; padding: 10px 18px; flex: 1; min-width: 150px;
-            text-align: center;
-        }
-        .summary-item .val { font-size: 24px; font-weight: bold; color: #3f51b5; }
-        .summary-item .lbl { font-size: 12px; color: #666; margin-top: 2px; }
-
-        /* Planning table */
-        .planning-table { width: 100%; border-collapse: collapse; }
-        .planning-table th {
-            background-color: #3f51b5; color: white; padding: 12px 14px; text-align: left;
-        }
-        .planning-table td {
-            padding: 14px; border-bottom: 1px solid #e0e0e0; vertical-align: top;
-        }
-        .planning-table tr:hover td { background-color: #f5f7ff; }
-
-        /* Vehicle badge */
-        .vehicle-badge {
-            display: inline-block; background: #e8eaf6; color: #3f51b5;
-            border-radius: 20px; padding: 4px 14px; font-weight: bold; font-size: 14px;
-        }
-        .carb-d { background: #e8f5e9; color: #2e7d32; }
-        .carb-e { background: #fff8e1; color: #f57f17; }
-        .carb-h { background: #e3f2fd; color: #1565c0; }
-
-        /* Time badges */
-        .time-depart { color: #1b5e20; font-weight: bold; font-size: 16px; }
-        .time-arrivee { color: #b71c1c; font-weight: bold; font-size: 16px; }
-
-        /* Reservation tags */
-        .res-tag {
-            display: inline-block; background: #ede7f6; color: #4527a0;
-            border-radius: 4px; padding: 3px 10px; margin: 2px 3px;
-            font-size: 13px;
-        }
-        .res-detail { font-size: 12px; color: #777; margin-top: 3px; }
-
-        /* Capacity bar */
-        .cap-bar-wrap { background: #e0e0e0; border-radius: 4px; height: 8px; margin-top: 5px; overflow: hidden; }
-        .cap-bar { height: 100%; border-radius: 4px; background: #4caf50; }
-
-        /* Empty state */
-        .empty-state { text-align: center; padding: 40px; color: #999; }
-        .empty-state .icon { font-size: 52px; }
-
-        /* Nav */
-        .nav-links { margin-top: 20px; }
-        .nav-links a { display: inline-block; margin-right: 10px; margin-bottom: 6px;
-                       padding: 8px 16px; background: #757575; color: white;
-                       border-radius: 4px; text-decoration: none; font-size: 13px; }
-        .nav-links a:hover { background: #616161; }
-    </style>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/theme.css">
 </head>
 <body>
-<div class="container">
+<div class="app-layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <h2>🚗 Réservation</h2>
+            <div class="brand-sub">Back-office</div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">Navigation</div>
+            <a href="${pageContext.request.contextPath}/lieu/list">
+                <span class="nav-icon">📍</span> Lieux
+            </a>
+            <a href="${pageContext.request.contextPath}/distance/list">
+                <span class="nav-icon">📏</span> Distances
+            </a>
+            <a href="${pageContext.request.contextPath}/voiture/list">
+                <span class="nav-icon">🚐</span> Voitures
+            </a>
+            <div class="nav-section">Opérations</div>
+            <a href="${pageContext.request.contextPath}/reservation/list">
+                <span class="nav-icon">📋</span> Réservations
+            </a>
+            <a href="${pageContext.request.contextPath}/reservation/form">
+                <span class="nav-icon">📝</span> Nouvelle réservation
+            </a>
+            <a href="${pageContext.request.contextPath}/planning/form" class="active">
+                <span class="nav-icon">📊</span> Planning
+            </a>
+            <div class="nav-section">Configuration</div>
+            <a href="${pageContext.request.contextPath}/parametre/list">
+                <span class="nav-icon">⚙️</span> Paramètres
+            </a>
+        </nav>
+        <div class="sidebar-footer">© 2026 Réservation</div>
+    </aside>
 
-    <!-- Header -->
-    <div class="page-header">
-        <h1>📊 Planning des Véhicules</h1>
-        <p>Visualisez l'assignation des réservations aux véhicules pour une date donnée</p>
-    </div>
+    <!-- MAIN -->
+    <div class="main-content">
+        <header class="topbar">
+            <div class="page-title"><span class="title-icon">📊</span> Planning des Véhicules</div>
+            <div class="breadcrumb">Accueil / Planning</div>
+        </header>
 
-    <!-- Formulaire de sélection de date -->
-    <div class="card">
-        <h2>🗓 Sélectionner une date</h2>
-        <form action="${pageContext.request.contextPath}/planning/result" method="get">
-            <div class="form-inline">
-                <div class="form-group">
-                    <label for="date">Date de départ :</label>
-                    <input type="date" id="date" name="date"
-                           value="${not empty date ? date : ''}">
+        <div class="page-content">
+            <!-- Date picker card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>🗓 Sélectionner une date</h2>
                 </div>
-                <button type="submit" class="btn-compute">🔍 Générer le planning</button>
+                <div class="card-body">
+                    <form action="${pageContext.request.contextPath}/planning/result" method="get">
+                        <div class="form-inline">
+                            <div class="form-group">
+                                <label for="date">Date de départ :</label>
+                                <input type="date" id="date" name="date" class="form-control"
+                                       value="${not empty date ? date : ''}">
+                            </div>
+                            <button type="submit" class="btn btn-primary">🔍 Générer le planning</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-        </form>
-    </div>
 
-    <!-- Erreur -->
-    <% if (request.getAttribute("error") != null) { %>
-        <div class="alert alert-error">❌ <%= request.getAttribute("error") %></div>
-    <% } %>
+            <!-- Error -->
+            <% if (request.getAttribute("error") != null) { %>
+                <div class="alert alert-error">❌ <%= request.getAttribute("error") %></div>
+            <% } %>
 
-    <%
-        List<PlanningEntry> planning = (List<PlanningEntry>) request.getAttribute("planning");
-        String date = (String) request.getAttribute("date");
-        Integer totalResas = (Integer) request.getAttribute("totalReservations");
-        Integer tempsAttente = (Integer) request.getAttribute("tempsAttente");
-        Double vitesse = (Double) request.getAttribute("vitesse");
+            <%
+                List<PlanningEntry> planning = (List<PlanningEntry>) request.getAttribute("planning");
+                String date = (String) request.getAttribute("date");
+                Integer totalResas = (Integer) request.getAttribute("totalReservations");
+                Integer tempsAttente = (Integer) request.getAttribute("tempsAttente");
+                Double vitesse = (Double) request.getAttribute("vitesse");
 
-        if (planning != null) {
-    %>
-
-    <!-- Résumé -->
-    <div class="summary-bar">
-        <div class="summary-item">
-            <div class="val"><%= totalResas != null ? totalResas : 0 %></div>
-            <div class="lbl">Réservations du jour</div>
-        </div>
-        <div class="summary-item">
-            <div class="val"><%= planning.size() %></div>
-            <div class="lbl">Départs planifiés</div>
-        </div>
-        <div class="summary-item">
-            <div class="val"><%= tempsAttente != null ? tempsAttente : 30 %> min</div>
-            <div class="lbl">Temps d'attente</div>
-        </div>
-        <div class="summary-item">
-            <div class="val"><%= vitesse != null ? vitesse.intValue() : 30 %> km/h</div>
-            <div class="lbl">Vitesse moyenne</div>
-        </div>
-    </div>
-
-    <div class="card">
-        <h2>🚐 Planning du <%= date %></h2>
-
-        <% if (planning.isEmpty()) { %>
-            <div class="empty-state">
-                <div class="icon">🗓</div>
-                <p>Aucune réservation pour ce jour.</p>
-            </div>
-        <% } else { %>
-
-        <table class="planning-table">
-            <thead>
-                <tr>
-                    <th>Véhicule</th>
-                    <th>Réservations</th>
-                    <th>Départ (✈ Aéroport)</th>
-                    <th>Arrivée hôtel / Retour ✈</th>
-                    <th>Passagers / Capacité</th>
-                    <th>Distance</th>
-                </tr>
-            </thead>
-            <tbody>
-            <% for (PlanningEntry entry : planning) {
-                   Voiture v = entry.getVoiture();
-                   String carbClass = v.getCarburant() == 'd' ? "carb-d" : (v.getCarburant() == 'e' ? "carb-e" : "carb-h");
-                   String carbLabel = v.getCarburant() == 'd' ? "Diesel" : (v.getCarburant() == 'e' ? "Essence" : "Hybride");
-                   int passTotal = entry.getTotalPassagers();
-                   int capacity  = v.getNbPlace();
-                   int pct = capacity > 0 ? Math.min(100, 100 * passTotal / capacity) : 0;
+                if (planning != null) {
             %>
-            <tr>
-                <td>
-                    <div class="vehicle-badge">V<%= v.getId() %> — <%= v.getMarque() %><%= v.getMatricule() != null ? " (" + v.getMatricule() + ")" : "" %></div><br>
-                    <span class="<%= carbClass %>" style="font-size:12px; padding:2px 8px; border-radius:10px; display:inline-block; margin-top:4px;">
-                        <%= carbLabel %> &bull; <%= capacity %> places
-                    </span>
-                </td>
-                <td>
-                    <% for (Reservation r : entry.getReservations()) { %>
-                        <span class="res-tag">R<%= r.getId() %></span>
-                    <% } %>
-                    <div class="res-detail">
-                    <% for (Reservation r : entry.getReservations()) { %>
-                        R<%= r.getId() %> : <%= r.getNbPassager() %> passagers
-                        <% if (r.getLieuCode() != null) { %>&rarr; <%= r.getLieuCode() %><% } %><br>
-                    <% } %>
+
+            <!-- Summary -->
+            <div class="summary-bar">
+                <div class="summary-item">
+                    <div class="val"><%= totalResas != null ? totalResas : 0 %></div>
+                    <div class="lbl">Réservations du jour</div>
+                </div>
+                <div class="summary-item">
+                    <div class="val"><%= planning.size() %></div>
+                    <div class="lbl">Départs planifiés</div>
+                </div>
+                <div class="summary-item">
+                    <div class="val"><%= tempsAttente != null ? tempsAttente : 30 %> min</div>
+                    <div class="lbl">Temps d'attente</div>
+                </div>
+                <div class="summary-item">
+                    <div class="val"><%= vitesse != null ? vitesse.intValue() : 30 %> km/h</div>
+                    <div class="lbl">Vitesse moyenne</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>🚐 Planning du <%= date %></h2>
+                </div>
+                <div class="card-body">
+                    <% if (planning.isEmpty()) { %>
+                        <div class="empty-state">
+                            <div class="icon">🗓</div>
+                            <p>Aucune réservation pour ce jour.</p>
+                        </div>
+                    <% } else { %>
+
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Véhicule</th>
+                                    <th>Réservations</th>
+                                    <th>Départ (✈ Aéroport)</th>
+                                    <th>Arrivée hôtel / Retour ✈</th>
+                                    <th>Passagers / Capacité</th>
+                                    <th>Distance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <% for (PlanningEntry entry : planning) {
+                                   Voiture v = entry.getVoiture();
+                                   String carbClass = v.getCarburant() == 'd' ? "badge-diesel" : (v.getCarburant() == 'e' ? "badge-essence" : "badge-hybride");
+                                   String carbLabel = v.getCarburant() == 'd' ? "Diesel" : (v.getCarburant() == 'e' ? "Essence" : "Hybride");
+                                   int passTotal = entry.getTotalPassagers();
+                                   int capacity  = v.getNbPlace();
+                                   int pct = capacity > 0 ? Math.min(100, 100 * passTotal / capacity) : 0;
+                            %>
+                            <tr>
+                                <td>
+                                    <div class="vehicle-badge">V<%= v.getId() %> — <%= v.getMarque() %><%= v.getMatricule() != null ? " (" + v.getMatricule() + ")" : "" %></div><br>
+                                    <span class="badge <%= carbClass %>" style="margin-top:4px;">
+                                        <%= carbLabel %> &bull; <%= capacity %> places
+                                    </span>
+                                </td>
+                                <td>
+                                    <% for (Reservation r : entry.getReservations()) { %>
+                                        <span class="res-tag">R<%= r.getId() %></span>
+                                    <% } %>
+                                    <div class="res-detail">
+                                    <% for (Reservation r : entry.getReservations()) { %>
+                                        R<%= r.getId() %> : <%= r.getNbPassager() %> passagers
+                                        <% if (r.getLieuCode() != null) { %>&rarr; <%= r.getLieuCode() %><% } %><br>
+                                    <% } %>
+                                    </div>
+                                </td>
+                                <td><span class="time-depart">✈ Départ : <%= entry.getDepartureFormatted() %></span></td>
+                                <td>
+                                    <span class="time-arrivee">🏨 Hôtel : <%= entry.getArrivalFormatted() %></span><br>
+                                    <span style="color:var(--accent); font-weight:bold; font-size:15px;">✈ Aéroport : <%= entry.getReturnToAirportFormatted() %></span>
+                                    <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">Disponible à partir de <%= entry.getReturnToAirportFormatted() %></div>
+                                </td>
+                                <td>
+                                    <strong><%= String.format("%.0f", entry.getTotalKm()) %> km</strong>
+                                    <div style="font-size:11px; color:var(--text-muted);">trajet complet</div>
+                                </td>
+                                <td>
+                                    <%= passTotal %> / <%= capacity %> places
+                                    <div class="cap-bar-wrap">
+                                        <div class="cap-bar" style="width:<%= pct %>%;"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <% } %>
+                            </tbody>
+                        </table>
                     </div>
-                </td>
-                <td><span class="time-depart">✈ Départ : <%= entry.getDepartureFormatted() %></span></td>
-                <td>
-                    <span class="time-arrivee">🏨 Hôtel : <%= entry.getArrivalFormatted() %></span><br>
-                    <span style="color:#1565c0; font-weight:bold; font-size:15px;">✈ Aéroport : <%= entry.getReturnToAirportFormatted() %></span>
-                    <div style="font-size:11px; color:#999; margin-top:3px;">Disponible à partir de <%= entry.getReturnToAirportFormatted() %></div>
-                </td>
-                <td>
-                    <strong><%= String.format("%.0f", entry.getTotalKm()) %> km</strong>
-                    <div style="font-size:11px; color:#999;">trajet complet</div>
-                </td>
-                <td>
-                    <%= passTotal %> / <%= capacity %> places
-                    <div class="cap-bar-wrap">
-                        <div class="cap-bar" style="width:<%= pct %>%;"></div>
+
+                    <% } %>
+                </div>
+            </div>
+
+            <%
+                List<Reservation> unassigned = (List<Reservation>) request.getAttribute("unassigned");
+                if (unassigned != null && !unassigned.isEmpty()) {
+                    SimpleDateFormat sdfU = new SimpleDateFormat("HH'h'mm");
+            %>
+            <div class="card card-warning">
+                <div class="card-header">
+                    <h2>⚠️ Réservations non assignées (<%= unassigned.size() %>)</h2>
+                </div>
+                <div class="card-body">
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th style="background-color:var(--warning);">ID</th>
+                                    <th style="background-color:var(--warning);">Client</th>
+                                    <th style="background-color:var(--warning);">Hôtel de destination</th>
+                                    <th style="background-color:var(--warning);">Passagers</th>
+                                    <th style="background-color:var(--warning);">Heure prévue</th>
+                                    <th style="background-color:var(--warning);">Raison</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <% for (Reservation r : unassigned) { %>
+                                <tr style="background-color:var(--warning-light);">
+                                    <td><strong style="color:var(--warning);">R<%= r.getId() %></strong></td>
+                                    <td><%= r.getIdClient() %></td>
+                                    <td><%= r.getLieuCode() != null ? r.getLieuCode() : "Hôtel #" + r.getIdHotel() %></td>
+                                    <td><%= r.getNbPassager() %> passager(s)</td>
+                                    <td><%= sdfU.format(r.getDateHeureArrivee()) %></td>
+                                    <td style="color:var(--danger);"><%= r.getUnassignedReason() != null ? r.getUnassignedReason() : "Non assigné" %></td>
+                                </tr>
+                            <% } %>
+                            </tbody>
+                        </table>
                     </div>
-                </td>
-            </tr>
+                </div>
+            </div>
             <% } %>
-            </tbody>
-        </table>
 
-        <% } %>
-    </div>
-
-    <%
-        List<Reservation> unassigned = (List<Reservation>) request.getAttribute("unassigned");
-        if (unassigned != null && !unassigned.isEmpty()) {
-            SimpleDateFormat sdfU = new SimpleDateFormat("HH'h'mm");
-    %>
-    <div class="card" style="border-top:3px solid #e65100;">
-        <h2 style="color:#e65100;">&#9888;&#65039; Réservations non assignées (<%= unassigned.size() %>)</h2>
-        <table class="planning-table">
-            <thead>
-                <tr>
-                    <th style="background-color:#e65100;">ID</th>
-                    <th style="background-color:#e65100;">Client</th>
-                    <th style="background-color:#e65100;">Hôtel de destination</th>
-                    <th style="background-color:#e65100;">Passagers</th>
-                    <th style="background-color:#e65100;">Heure prévue</th>
-                    <th style="background-color:#e65100;">Raison</th>
-                </tr>
-            </thead>
-            <tbody>
-            <% for (Reservation r : unassigned) { %>
-                <tr style="background-color:#fff3e0;">
-                    <td><strong style="color:#e65100;">R<%= r.getId() %></strong></td>
-                    <td><%= r.getIdClient() %></td>
-                    <td><%= r.getLieuCode() != null ? r.getLieuCode() : "Hôtel #" + r.getIdHotel() %></td>
-                    <td><%= r.getNbPassager() %> passager(s)</td>
-                    <td><%= sdfU.format(r.getDateHeureArrivee()) %></td>
-                    <td style="color:#c62828;"><%= r.getUnassignedReason() != null ? r.getUnassignedReason() : "Non assigné" %></td>
-                </tr>
             <% } %>
-            </tbody>
-        </table>
+        </div>
     </div>
-    <% } %>
-
-    <% } %>
-
-    <div class="nav-links">
-        <a href="${pageContext.request.contextPath}/reservation/form">📝 Nouvelle réservation</a>
-        <a href="${pageContext.request.contextPath}/reservation/list">📋 Réservations</a>
-        <a href="${pageContext.request.contextPath}/voiture/list">🚐 Voitures</a>
-        <a href="${pageContext.request.contextPath}/distance/list">📏 Distances</a>
-        <a href="${pageContext.request.contextPath}/parametre/list">⚙ Paramètres</a>
-    </div>
-
 </div>
 </body>
 </html>

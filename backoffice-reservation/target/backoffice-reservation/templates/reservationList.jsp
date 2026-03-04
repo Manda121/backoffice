@@ -6,146 +6,109 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Liste des Réservations</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background-color: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .actions {
-            text-align: right;
-            margin-bottom: 20px;
-        }
-        .btn {
-            padding: 10px 20px;
-            background-color: #4CAF50;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            display: inline-block;
-        }
-        .btn:hover {
-            background-color: #45a049;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background-color: #4CAF50;
-            color: white;
-            font-weight: bold;
-        }
-        tr:hover {
-            background-color: #f5f5f5;
-        }
-        .no-data {
-            text-align: center;
-            padding: 40px;
-            color: #999;
-            font-style: italic;
-        }
-        .error {
-            background-color: #ffebee;
-            color: #c62828;
-            padding: 15px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-        }
-    </style>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/theme.css">
 </head>
 <body>
-    <div class="container">
-        <h1>📋 Liste des Réservations</h1>
-        
-        <div class="actions">
-            <a href="${pageContext.request.contextPath}/reservation/form" class="btn">
-                ➕ Nouvelle réservation
-            </a>
+<div class="app-layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <h2>🚗 Réservation</h2>
+            <div class="brand-sub">Back-office</div>
         </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">Navigation</div>
+            <a href="${pageContext.request.contextPath}/lieu/list">
+                <span class="nav-icon">📍</span> Lieux
+            </a>
+            <a href="${pageContext.request.contextPath}/distance/list">
+                <span class="nav-icon">📏</span> Distances
+            </a>
+            <a href="${pageContext.request.contextPath}/voiture/list">
+                <span class="nav-icon">🚐</span> Voitures
+            </a>
+            <div class="nav-section">Opérations</div>
+            <a href="${pageContext.request.contextPath}/reservation/list" class="active">
+                <span class="nav-icon">📋</span> Réservations
+            </a>
+            <a href="${pageContext.request.contextPath}/reservation/form">
+                <span class="nav-icon">📝</span> Nouvelle réservation
+            </a>
+            <a href="${pageContext.request.contextPath}/planning/form">
+                <span class="nav-icon">📊</span> Planning
+            </a>
+            <div class="nav-section">Configuration</div>
+            <a href="${pageContext.request.contextPath}/parametre/list">
+                <span class="nav-icon">⚙️</span> Paramètres
+            </a>
+        </nav>
+        <div class="sidebar-footer">© 2026 Réservation</div>
+    </aside>
 
-        <%
-            String error = (String) request.getAttribute("error");
-            if (error != null) {
-        %>
-        <div class="error">
-            <%= error %>
-        </div>
-        <%
-            }
-            
-            List<Reservation> reservations = (List<Reservation>) request.getAttribute("reservations");
-            if (reservations != null && !reservations.isEmpty()) {
-                SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
-        %>
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>ID Client</th>
-                    <th>Hôtel</th>
-                    <th>Ville</th>
-                    <th>Nb Passagers</th>
-                    <th>Date Arrivée</th>
-                </tr>
-            </thead>
-            <tbody>
-                <%
-                    for (Reservation reservation : reservations) {
-                %>
-                <tr>
-                    <td><%= reservation.getId() %></td>
-                    <td><%= reservation.getIdClient() %></td>
-                    <td><%= reservation.getHotelName() %></td>
-                    <td><%= reservation.getHotelVille() %></td>
-                    <td><%= reservation.getNbPassager() %></td>
-                    <td><%= sdf.format(reservation.getDateHeureArrivee()) %></td>
-                </tr>
-                <%
-                    }
-                %>
-            </tbody>
-        </table>
-        <%
-            } else {
-        %>
-        <div class="no-data">
-            Aucune réservation enregistrée pour le moment.
-        </div>
-        <%
-            }
-        %>
-        <div style="margin-top:20px;">
-            <a href="${pageContext.request.contextPath}/planning/form"
-               style="padding:10px 20px; background:#3f51b5; color:white; text-decoration:none; border-radius:4px;">
-                📊 Planning des véhicules
-            </a>
-            <a href="${pageContext.request.contextPath}/distance/list"
-               style="padding:10px 20px; background:#757575; color:white; text-decoration:none; border-radius:4px; margin-left:8px;">
-                📏 Distances
-            </a>
+    <!-- MAIN -->
+    <div class="main-content">
+        <header class="topbar">
+            <div class="page-title"><span class="title-icon">📋</span> Liste des Réservations</div>
+            <div class="breadcrumb">Accueil / Réservations</div>
+        </header>
+
+        <div class="page-content">
+            <%
+                String error = (String) request.getAttribute("error");
+                if (error != null) {
+            %>
+            <div class="alert alert-error">❌ <%= error %></div>
+            <% } %>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Réservations enregistrées</h2>
+                    <a href="${pageContext.request.contextPath}/reservation/form" class="btn btn-success">➕ Nouvelle réservation</a>
+                </div>
+                <div class="card-body">
+                    <%
+                        List<Reservation> reservations = (List<Reservation>) request.getAttribute("reservations");
+                        if (reservations != null && !reservations.isEmpty()) {
+                            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+                    %>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>ID Client</th>
+                                    <th>Hôtel</th>
+                                    <th>Ville</th>
+                                    <th>Nb Passagers</th>
+                                    <th>Date Arrivée</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% for (Reservation reservation : reservations) { %>
+                                <tr>
+                                    <td><span class="badge badge-res">R<%= reservation.getId() %></span></td>
+                                    <td><strong><%= reservation.getIdClient() %></strong></td>
+                                    <td><%= reservation.getHotelName() %></td>
+                                    <td><%= reservation.getHotelVille() %></td>
+                                    <td><%= reservation.getNbPassager() %></td>
+                                    <td><%= sdf.format(reservation.getDateHeureArrivee()) %></td>
+                                </tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                    <% } else { %>
+                    <div class="empty-state">
+                        <div class="icon">📋</div>
+                        <p>Aucune réservation enregistrée pour le moment.</p>
+                    </div>
+                    <% } %>
+                </div>
+            </div>
         </div>
     </div>
+</div>
 </body>
 </html>
