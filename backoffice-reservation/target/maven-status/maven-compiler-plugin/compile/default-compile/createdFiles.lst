@@ -5,6 +5,7 @@ util\Main.class
 controller\ParametreController.class
 models\Lieu.class
 controller\LieuController.class
+controller\PlanningController$RouteCalc.class
 util\TokenUtil.class
 models\Hotel.class
 models\PlanningEntry.class

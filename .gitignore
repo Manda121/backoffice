@@ -1,0 +1,6 @@
+# Ignore build output
+target/
+
+# More specific ignores (subprojects)
+framework/target/
+backoffice-reservation/target/

@@ -16,7 +16,7 @@ ON CONFLICT (code) DO NOTHING;
 -- --------------------------------------------------------
 -- Codes des hôtels existants (insérés par init-database.sql)
 -- --------------------------------------------------------
-UPDATE hotel SET code = 'COLBERT' WHERE LOWER(name) LIKE '%colbert%' AND (code IS NULL OR code = '');
+UPDATE hotel SET code = 'HILBERT' WHERE LOWER(name) LIKE '%hilbert%' AND (code IS NULL OR code = '');
 UPDATE hotel SET code = 'NOVOTEL' WHERE LOWER(name) LIKE '%novotel%' AND (code IS NULL OR code = '');
 UPDATE hotel SET code = 'IBIS'    WHERE LOWER(name) LIKE '%ibis%'    AND (code IS NULL OR code = '');
 UPDATE hotel SET code = 'LOKANGA' WHERE LOWER(name) LIKE '%lokanga%' AND (code IS NULL OR code = '');
@@ -40,13 +40,13 @@ ON CONFLICT (code) DO NOTHING;
 INSERT INTO distance (lieu_from, lieu_to, km)
 SELECT h_from.id, h_to.id, d.km
 FROM (VALUES
-    ('IVATO',   'COLBERT',  23),
+    ('IVATO',   'HILBERT',  23),
     ('IVATO',   'NOVOTEL',  18),
     ('IVATO',   'IBIS',     20),
     ('IVATO',   'LOKANGA',  160),
     ('IVATO',   'HILTON',   22),
-    ('COLBERT', 'NOVOTEL',  5),
-    ('COLBERT', 'IBIS',     6),
+    ('HILBERT', 'NOVOTEL',  5),
+    ('HILBERT', 'IBIS',     6),
     ('HILTON',  'LOKANGA',  155)  
 ) AS d(from_code, to_code, km)
 JOIN hotel h_from ON h_from.code = d.from_code
