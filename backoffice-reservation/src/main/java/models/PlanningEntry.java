@@ -17,20 +17,23 @@ public class PlanningEntry {
     private LocalDateTime departureTime;
     private LocalDateTime arrivalTime;           // arrivée à l'hôtel
     private LocalDateTime returnToAirportTime;   // retour à l'aéroport
-    private double km;                           // distance aller (one-way)
+    private double km;                           // distance totale aller-retour
+    private List<String[]> itinerarySteps;       // [{code, kmFromPrev}, ...]
 
     public PlanningEntry() {
     }
 
     public PlanningEntry(Voiture voiture, List<Reservation> reservations,
                          LocalDateTime departureTime, LocalDateTime arrivalTime,
-                         LocalDateTime returnToAirportTime, double km) {
+                         LocalDateTime returnToAirportTime, double km,
+                         List<String[]> itinerarySteps) {
         this.voiture = voiture;
         this.reservations = reservations;
         this.departureTime = departureTime;
         this.arrivalTime = arrivalTime;
         this.returnToAirportTime = returnToAirportTime;
         this.km = km;
+        this.itinerarySteps = itinerarySteps;
     }
 
     public Voiture getVoiture() { return voiture; }
@@ -68,6 +71,12 @@ public class PlanningEntry {
 
     /** Distance totale du trajet complet (aéroport → hôtels → aéroport) */
     public double getTotalKm() { return km; }
+
+    /** Étapes de l'itinéraire : chaque élément est {code, kmFromPrev} */
+    public List<String[]> getItinerarySteps() {
+        return itinerarySteps != null ? itinerarySteps : new java.util.ArrayList<>();
+    }
+    public void setItinerarySteps(List<String[]> steps) { this.itinerarySteps = steps; }
 
     /** Nombre total de passagers dans ce groupe */
     public int getTotalPassagers() {

@@ -101,6 +101,8 @@ public class PlanningController {
 
         List<PlanningEntry> entries = new ArrayList<>();
         boolean[] assigned = new boolean[reservations.size()];
+        Map<Integer, String> hotelCodeMap = getHotelCodeMap();
+        String airportCode = hotelCodeMap.getOrDefault(airportId, "IVATO");
 
         // Heure à laquelle chaque véhicule sera de retour à l'aéroport
         Map<Integer, LocalDateTime> disponibleA = new HashMap<>();
@@ -169,18 +171,24 @@ public class PlanningController {
                 }
             }
 
-            // --- Calculer les horaires et la distance du trajet complet ---
-            double[] route = calculateRoute(lot, airportId, vitesseKmH);
-            double totalRouteKm    = route[0];
-            long minsToLastHotel   = (long) route[1];
-            long totalRouteMinutes = (long) route[2];
+            // --- Calculer les horaires, distance et itinéraire ---
+            RouteCalc route = calculateRoute(lot, airportId, vitesseKmH, hotelCodeMap);
+            LocalDateTime arrivee        = depart.plusMinutes(route.minsToLastHotel);
+            LocalDateTime retourAeroport = depart.plusMinutes(route.totalRouteMinutes);
 
-            LocalDateTime arrivee        = depart.plusMinutes(minsToLastHotel);
-            LocalDateTime retourAeroport = depart.plusMinutes(totalRouteMinutes);
+            // Construire les étapes d'itinéraire : [{code, kmFromPrev}, ...]
+            List<String[]> itin = new ArrayList<>();
+            itin.add(new String[]{airportCode, ""});
+            for (int s = 0; s < route.orderedHotelIds.size(); s++) {
+                String hCode = hotelCodeMap.getOrDefault(route.orderedHotelIds.get(s),
+                        "H#" + route.orderedHotelIds.get(s));
+                itin.add(new String[]{hCode, String.format("%.0f km", route.legKms.get(s))});
+            }
+            itin.add(new String[]{airportCode,
+                    String.format("%.0f km", route.legKms.get(route.legKms.size() - 1))});
 
             disponibleA.put(selectionne.getId(), retourAeroport);
-
-            entries.add(new PlanningEntry(selectionne, lot, depart, arrivee, retourAeroport, totalRouteKm));
+            entries.add(new PlanningEntry(selectionne, lot, depart, arrivee, retourAeroport, route.totalKm, itin));
         }
 
         return entries;
@@ -188,53 +196,85 @@ public class PlanningController {
 
     /**
      * Calcule le trajet complet pour un lot de réservations.
-     * Hôtels visités du plus proche au plus éloigné de l'aéroport.
-     * Retourne [totalKm, minutesJusquAuDernierHotel, totalMinutesAllerRetour]
+     * Hôtels triés par distance croissante depuis l'aéroport, puis alphabétiquement (code)
+     * en cas d'égalité de distance.
      */
-    private double[] calculateRoute(List<Reservation> lot, int airportId, double vitesseKmH) throws SQLException {
-        // Hôtels distincts du lot
+    private RouteCalc calculateRoute(List<Reservation> lot, int airportId, double vitesseKmH,
+                                     Map<Integer, String> hotelCodeMap) throws SQLException {
         List<Integer> hotelIds = lot.stream()
                 .map(Reservation::getIdHotel)
                 .distinct()
                 .collect(Collectors.toList());
 
-        if (hotelIds.isEmpty()) return new double[]{0, 0, 0};
+        if (hotelIds.isEmpty())
+            return new RouteCalc(0, 0, 0, Collections.emptyList(), Collections.emptyList());
 
-        // Distances depuis l'aéroport pour chaque hôtel
         Map<Integer, Double> distFromAirport = new HashMap<>();
-        for (int hId : hotelIds) {
+        for (int hId : hotelIds)
             distFromAirport.put(hId, DistanceController.getKmBetween(airportId, hId));
-        }
 
-        // Trier par distance depuis l'aéroport (plus proche en premier)
-        hotelIds.sort(Comparator.comparingDouble(distFromAirport::get));
+        // Tri : distance depuis l'aéroport croissante, puis code alphabétique en cas d'égalité
+        hotelIds.sort(Comparator
+                .comparingDouble((Integer h) -> distFromAirport.get(h))
+                .thenComparing(h -> hotelCodeMap.getOrDefault(h, "")));
 
         double totalKm = 0;
         double minutesToLastHotel = 0;
         int prevId = airportId;
+        List<Double> legKms = new ArrayList<>();
 
         for (int hId : hotelIds) {
             double legKm;
             if (prevId == airportId) {
-                // Premier trajet : aéroport → hôtel le plus proche
                 legKm = distFromAirport.get(hId);
             } else {
-                // Distance directe si dispos dans la table, sinon soustraction des distances depuis l'aéroport
                 double direct = DistanceController.getKmBetween(prevId, hId);
                 legKm = direct > 0 ? direct
                         : Math.abs(distFromAirport.get(hId) - distFromAirport.get(prevId));
             }
+            legKms.add(legKm);
             totalKm += legKm;
             minutesToLastHotel += vitesseKmH > 0 ? (legKm / vitesseKmH) * 60 : 0;
             prevId = hId;
         }
 
-        // Retour à l'aéroport depuis le dernier hôtel
         double returnKm = distFromAirport.get(hotelIds.get(hotelIds.size() - 1));
+        legKms.add(returnKm);
         totalKm += returnKm;
-        double totalMinutes = minutesToLastHotel + (vitesseKmH > 0 ? (returnKm / vitesseKmH) * 60 : 0);
+        double totalMinutes = minutesToLastHotel
+                + (vitesseKmH > 0 ? (returnKm / vitesseKmH) * 60 : 0);
 
-        return new double[]{totalKm, minutesToLastHotel, totalMinutes};
+        return new RouteCalc(totalKm, (long) minutesToLastHotel, (long) totalMinutes, hotelIds, legKms);
+    }
+
+    /** Résultat du calcul de trajet. */
+    private static class RouteCalc {
+        final double totalKm;
+        final long minsToLastHotel;
+        final long totalRouteMinutes;
+        final List<Integer> orderedHotelIds;
+        final List<Double>  legKms; // taille = hotels + 1 (dernier = retour aéroport)
+
+        RouteCalc(double totalKm, long minsToLastHotel, long totalRouteMinutes,
+                  List<Integer> orderedHotelIds, List<Double> legKms) {
+            this.totalKm          = totalKm;
+            this.minsToLastHotel  = minsToLastHotel;
+            this.totalRouteMinutes = totalRouteMinutes;
+            this.orderedHotelIds  = orderedHotelIds;
+            this.legKms           = legKms;
+        }
+    }
+
+    /** Retourne un map id → code pour tous les hôtels. */
+    private Map<Integer, String> getHotelCodeMap() throws SQLException {
+        Map<Integer, String> map = new HashMap<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "SELECT id, code FROM hotel WHERE code IS NOT NULL");
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) map.put(rs.getInt("id"), rs.getString("code"));
+        }
+        return map;
     }
 
     /**

@@ -11,6 +11,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Planning des Véhicules</title>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/theme.css">
+    <style>
+        .itin-row td { background:#f9fbe7; border-bottom:2px solid #e0e0e0; padding:6px 18px 10px; }
+        .itin-label  { font-weight:bold; color:#5c6bc0; margin-right:8px; font-size:13px; }
+        .itin-node   { display:inline-block; padding:2px 9px; border-radius:12px;
+                       font-weight:bold; font-size:12px; margin:0 1px; }
+        .itin-airport { background:#e3f2fd; color:#1565c0; }
+        .itin-hotel   { background:#f3e5f5; color:#4527a0; }
+        .itin-arrow   { color:#9e9e9e; font-size:12px; margin:0 3px; }
+    </style>
 </head>
 <body>
 <div class="app-layout">
@@ -177,6 +186,24 @@
                                     <div class="cap-bar-wrap">
                                         <div class="cap-bar" style="width:<%= pct %>%;"></div>
                                     </div>
+                                </td>
+                            </tr>
+                            <tr class="itin-row">
+                                <td colspan="6">
+                                    <span class="itin-label">&#x1F5FA; Itin&eacute;raire :</span>
+                                    <%
+                                        java.util.List<String[]> itinSteps = entry.getItinerarySteps();
+                                        for (int si = 0; si < itinSteps.size(); si++) {
+                                            String[] step = itinSteps.get(si);
+                                            boolean isEndpoint = (si == 0 || si == itinSteps.size() - 1);
+                                    %>
+                                    <% if (si > 0) { %>
+                                        <span class="itin-arrow">&rarr; (<%= step[1] %>) &rarr;</span>
+                                    <% } %>
+                                    <span class="itin-node <%= isEndpoint ? "itin-airport" : "itin-hotel" %>">
+                                        <%= isEndpoint ? "&#x2708;" : "&#x1F3E8;" %> <%= step[0] %>
+                                    </span>
+                                    <% } %>
                                 </td>
                             </tr>
                             <% } %>
