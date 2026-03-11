@@ -4,7 +4,7 @@ echo Build et deploiement sur Tomcat
 echo ========================================
 
 set TOMCAT_WEBAPPS=C:\apache-tomcat-10.1.28\webapps
-set WAR_NAME=backoffice-reservation.war
+set WAR_NAME=backoffice-reservation-sprint4.war
 
 echo.
 echo [1/2] Compilation du projet...
