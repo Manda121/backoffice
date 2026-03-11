@@ -49,7 +49,7 @@
     </dependencies>
 
     <build>
-        <finalName>backoffice-reservation</finalName>
+        <finalName>backoffice-reservation-sprint4</finalName>
         <plugins>
             <!-- Compiler plugin avec paramètres activés -->
             <plugin>
