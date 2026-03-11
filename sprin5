@@ -1,0 +1,11 @@
+actuellement, on ne considere pas le temps d attente. maintennat on considere le temps d attente en minute qui est stocke dans la table parametre:
+ id |      code       | valeur |                              description
+----+-----------------+--------+-----------------------------------------------------------------------
+  1 | vitesse_moyenne | 30     | Vitesse moyenne des v├®hicules en km/h
+  2 | temps_attente   | 30     | Temps d'attente en minutes (stock├® mais non utilis├® dans le calcul)
+
+maintenant on considere le temps d attente et voila les regle:
+	le temps d attente en faite c est le temps que la voiture a au maximum pour attendre l heure d arrive des autres réservations.
+	on prend tous les reservaitons, et l heure initiale pour debuter l heure d attente est la date d arrive du premier reservation, apres tous les voitures qui ont pris les reservation regroupees dans l intervalle du temps d attente auront la meme heure de depart. mais pour cette heure de depart, c est par forcement la date initiale + temps d attente mais si il n y a plus de reservation compris entre la temps d attente, la date de depart sera l heure d arrive du dernier reservation qui peuvent etre compris entre l heure initiale + temps d attente.
+    apres que l heure de depart des dernier groupement de voitures, le prochain heure initiale serait le premier heure d arrive des reservation restant. et ainsi de suite.
+    les regle pour assigne les réservations a une voiture seront les memes.

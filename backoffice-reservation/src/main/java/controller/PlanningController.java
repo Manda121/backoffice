@@ -90,7 +90,13 @@ public class PlanningController {
      *  - Règle 3 : priorité au carburant Diesel à capacité égale
      *  - Règle 4 : choix aléatoire à capacité et carburant égaux
      *
-     * Le temps d'attente permet de regrouper les réservations proches dans un même véhicule.
+     * Le temps d'attente (en minutes) regroupe les réservations dans une fenêtre glissante :
+     *  - L'heure initiale du groupe = heure d'arrivée de la 1ère réservation non assignée.
+     *  - Toutes les réservations dont l'heure ≤ heureInitiale + tempsAttente sont candidates.
+     *  - L'heure de départ réelle = heure d'arrivée de la dernière réservation du groupe
+     *    (pas nécessairement heureInitiale + tempsAttente).
+     *  - Les véhicules disponibles sont ceux libres à heureInitiale.
+     *  - Après chaque groupe, la prochaine heureInitiale = heure de la 1ère réservation restante.
      */
     private List<PlanningEntry> assignReservations(
             List<Reservation> reservations,
@@ -98,6 +104,9 @@ public class PlanningController {
             double vitesseKmH,
             int airportId,
             List<Reservation> unassigned) throws SQLException {
+        // NOTE: tempsAttenteMin is fetched in computePlanning and passed indirectly;
+        //       we re-fetch it here so this method remains self-contained.
+        int tempsAttenteMin = ParametreController.getParamInt("temps_attente", 30);
 
         List<PlanningEntry> entries = new ArrayList<>();
         boolean[] assigned = new boolean[reservations.size()];
@@ -110,85 +119,130 @@ public class PlanningController {
             disponibleA.put(v.getId(), LocalDateTime.MIN);
         }
 
-        for (int i = 0; i < reservations.size(); i++) {
-            if (assigned[i]) continue;
+        // Boucle principale : on traite les réservations groupe par groupe
+        int i = 0;
+        while (i < reservations.size()) {
+            // Trouver la prochaine réservation non assignée
+            while (i < reservations.size() && assigned[i]) i++;
+            if (i >= reservations.size()) break;
 
-            Reservation premiere = reservations.get(i);
-            LocalDateTime premierTemps = premiere.getDateHeureArrivee().toLocalDateTime();
-            LocalDateTime depart       = premierTemps;
+            // --- Heure initiale du groupe = heure d'arrivée de la 1ère réservation non assignée ---
+            LocalDateTime heureInitiale = reservations.get(i).getDateHeureArrivee().toLocalDateTime();
+            LocalDateTime fenetreMax    = heureInitiale.plusMinutes(tempsAttenteMin);
 
-            // --- Collecter les réservations candidates dans la fenêtre d'attente ---
-            List<Integer> candidatsIdx = new ArrayList<>();
-            for (int j = i + 1; j < reservations.size(); j++) {
+            // --- Collecter TOUS les indices non assignés dont l'heure ≤ heureInitiale + tempsAttente ---
+            List<Integer> groupeIdx = new ArrayList<>();
+            for (int j = i; j < reservations.size(); j++) {
                 if (!assigned[j]) {
                     LocalDateTime t = reservations.get(j).getDateHeureArrivee().toLocalDateTime();
-                    if (!t.isAfter(depart)) candidatsIdx.add(j);
+                    if (!t.isAfter(fenetreMax)) {
+                        groupeIdx.add(j);
+                    }
                 }
             }
 
-            // --- Véhicules disponibles au moment de la 1ère réservation ---
-            final LocalDateTime tp = premierTemps;
+            // --- Heure de départ réelle = heure d'arrivée de la DERNIÈRE réservation du groupe ---
+            LocalDateTime depart = groupeIdx.stream()
+                    .map(idx -> reservations.get(idx).getDateHeureArrivee().toLocalDateTime())
+                    .max(Comparator.naturalOrder())
+                    .orElse(heureInitiale);
+
+            // --- Véhicules disponibles à heureInitiale ---
+            final LocalDateTime hInit = heureInitiale;
             List<Voiture> disponibles = voitures.stream()
-                    .filter(v -> !disponibleA.get(v.getId()).isAfter(tp))
+                    .filter(v -> !disponibleA.get(v.getId()).isAfter(hInit))
                     .collect(Collectors.toList());
 
-            // --- Calculer le total passagers en incluant tous les candidats ---
-            int totalPassagers = premiere.getNbPassager()
-                    + candidatsIdx.stream().mapToInt(idx -> reservations.get(idx).getNbPassager()).sum();
+            // --- Distribuer les réservations du groupe en lots (un véhicule par lot) ---
+            boolean[] groupeAssigned = new boolean[groupeIdx.size()];
 
-            // Essayer de trouver un véhicule qui prend tout le monde
-            Voiture selectionne = selectMeilleurVehicule(disponibles, totalPassagers);
+            for (int gi = 0; gi < groupeIdx.size(); gi++) {
+                if (groupeAssigned[gi]) continue;
 
-            // Si impossible avec tous les candidats, prendre au moins la première réservation
-            if (selectionne == null) {
-                selectionne = selectMeilleurVehicule(disponibles, premiere.getNbPassager());
-            }
-            // Si toujours null : aucun véhicule disponible → réservation non assignée
-            if (selectionne == null) {
-                boolean capaciteInsuffisante = voitures.stream().noneMatch(v -> v.getNbPlace() >= premiere.getNbPassager());
-                String timeStr = String.format("%dh%02d", depart.getHour(), depart.getMinute());
-                String reason = capaciteInsuffisante
-                        ? "Capacité insuffisante (" + premiere.getNbPassager() + " passager(s) requis, max disponible : "
-                          + voitures.stream().mapToInt(Voiture::getNbPlace).max().orElse(0) + " places)"
-                        : "Aucun véhicule disponible à " + timeStr;
-                premiere.setUnassignedReason(reason);
-                unassigned.add(premiere);
-                continue;
-            }
+                int firstIdx = groupeIdx.get(gi);
+                Reservation premiere = reservations.get(firstIdx);
 
-            // --- Constituer le lot final (greedy selon la capacité du véhicule choisi) ---
-            List<Reservation> lot = new ArrayList<>();
-            lot.add(premiere);
-            assigned[i] = true;
-            int passagersLot = premiere.getNbPassager();
-
-            for (int idx : candidatsIdx) {
-                int nb = reservations.get(idx).getNbPassager();
-                if (passagersLot + nb <= selectionne.getNbPlace()) {
-                    lot.add(reservations.get(idx));
-                    assigned[idx] = true;
-                    passagersLot += nb;
+                // Calculer le total passagers pour les réservations restantes du groupe
+                List<Integer> candidatsGi = new ArrayList<>();
+                for (int gj = gi + 1; gj < groupeIdx.size(); gj++) {
+                    if (!groupeAssigned[gj]) candidatsGi.add(gj);
                 }
+
+                int totalPassagers = premiere.getNbPassager()
+                        + candidatsGi.stream()
+                              .mapToInt(gj -> reservations.get(groupeIdx.get(gj)).getNbPassager())
+                              .sum();
+
+                // Essayer de trouver un véhicule qui prend tout le monde
+                Voiture selectionne = selectMeilleurVehicule(disponibles, totalPassagers);
+
+                // Si impossible avec tous, prendre au moins la première réservation
+                if (selectionne == null) {
+                    selectionne = selectMeilleurVehicule(disponibles, premiere.getNbPassager());
+                }
+
+                // Si toujours null : aucun véhicule disponible → réservation non assignée
+                if (selectionne == null) {
+                    boolean capaciteInsuffisante = voitures.stream()
+                            .noneMatch(v -> v.getNbPlace() >= premiere.getNbPassager());
+                    String timeStr = String.format("%dh%02d", depart.getHour(), depart.getMinute());
+                    String reason = capaciteInsuffisante
+                            ? "Capacité insuffisante (" + premiere.getNbPassager()
+                              + " passager(s) requis, max disponible : "
+                              + voitures.stream().mapToInt(Voiture::getNbPlace).max().orElse(0) + " places)"
+                            : "Aucun véhicule disponible à " + timeStr;
+                    premiere.setUnassignedReason(reason);
+                    unassigned.add(premiere);
+                    groupeAssigned[gi] = true;
+                    assigned[firstIdx] = true;
+                    continue;
+                }
+
+                // --- Constituer le lot final (greedy selon la capacité du véhicule choisi) ---
+                List<Reservation> lot = new ArrayList<>();
+                lot.add(premiere);
+                groupeAssigned[gi] = true;
+                assigned[firstIdx] = true;
+                int passagersLot = premiere.getNbPassager();
+
+                for (int gj : candidatsGi) {
+                    int nb = reservations.get(groupeIdx.get(gj)).getNbPassager();
+                    if (passagersLot + nb <= selectionne.getNbPlace()) {
+                        lot.add(reservations.get(groupeIdx.get(gj)));
+                        groupeAssigned[gj] = true;
+                        assigned[groupeIdx.get(gj)] = true;
+                        passagersLot += nb;
+                    }
+                }
+
+                // Retirer le véhicule sélectionné des disponibles pour ce groupe
+                final int selectedId = selectionne.getId();
+                disponibles = disponibles.stream()
+                        .filter(v -> v.getId() != selectedId)
+                        .collect(Collectors.toList());
+
+                // --- Calculer les horaires, distance et itinéraire ---
+                RouteCalc route = calculateRoute(lot, airportId, vitesseKmH, hotelCodeMap);
+                LocalDateTime arrivee        = depart.plusMinutes(route.minsToLastHotel);
+                LocalDateTime retourAeroport = depart.plusMinutes(route.totalRouteMinutes);
+
+                // Construire les étapes d'itinéraire
+                List<String[]> itin = new ArrayList<>();
+                itin.add(new String[]{airportCode, ""});
+                for (int s = 0; s < route.orderedHotelIds.size(); s++) {
+                    String hCode = hotelCodeMap.getOrDefault(route.orderedHotelIds.get(s),
+                            "H#" + route.orderedHotelIds.get(s));
+                    itin.add(new String[]{hCode, String.format("%.0f km", route.legKms.get(s))});
+                }
+                itin.add(new String[]{airportCode,
+                        String.format("%.0f km", route.legKms.get(route.legKms.size() - 1))});
+
+                disponibleA.put(selectionne.getId(), retourAeroport);
+                entries.add(new PlanningEntry(selectionne, lot, depart, arrivee, retourAeroport, route.totalKm, itin));
             }
 
-            // --- Calculer les horaires, distance et itinéraire ---
-            RouteCalc route = calculateRoute(lot, airportId, vitesseKmH, hotelCodeMap);
-            LocalDateTime arrivee        = depart.plusMinutes(route.minsToLastHotel);
-            LocalDateTime retourAeroport = depart.plusMinutes(route.totalRouteMinutes);
-
-            // Construire les étapes d'itinéraire : [{code, kmFromPrev}, ...]
-            List<String[]> itin = new ArrayList<>();
-            itin.add(new String[]{airportCode, ""});
-            for (int s = 0; s < route.orderedHotelIds.size(); s++) {
-                String hCode = hotelCodeMap.getOrDefault(route.orderedHotelIds.get(s),
-                        "H#" + route.orderedHotelIds.get(s));
-                itin.add(new String[]{hCode, String.format("%.0f km", route.legKms.get(s))});
-            }
-            itin.add(new String[]{airportCode,
-                    String.format("%.0f km", route.legKms.get(route.legKms.size() - 1))});
-
-            disponibleA.put(selectionne.getId(), retourAeroport);
-            entries.add(new PlanningEntry(selectionne, lot, depart, arrivee, retourAeroport, route.totalKm, itin));
+            // Avancer i au-delà du groupe courant
+            i = groupeIdx.get(groupeIdx.size() - 1) + 1;
         }
 
         return entries;

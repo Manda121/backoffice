@@ -3,7 +3,7 @@
 -- Données initiales : paramètres, codes hôtels, aéroport, distances, véhicules
 -- ============================================================
 
-\c reservation;
+\c reservation_sprint5;
 
 -- --------------------------------------------------------
 -- Paramètres du système
