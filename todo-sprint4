@@ -1,0 +1,37 @@
+TEAM LEAD: ETU003280 MITANTSOA Notiavina Mandaniaina
+Dev backoffice: ETU003354 RANTHOLY Kamel Tommy
+Dev frontoffice: ETU03377 RAZAFINJATOVO Mialy Soa Lucia
+
+===============================================
+SPRINT 4: regroupement de reservation
+===============================================
+
+Objectif principal:
+- Ajouter la fonctionnalité de REGROUPEMENT des réservations dans Sprint 4 :
+  si plusieurs réservations compatibles tiennent dans une seule voiture (somme des `nb_personnes` <= capacité),
+  on les assigne à la même `Voiture`. Conserver la priorité diesel et les autres règles métier.
+
+TODO Sprint 4 — Regroupement des reservations (priorité)
+
+1. Service de regroupement (20 min)
+  - Implémenter `RegroupementService` dans le controller PlanningController: 
+     - assigne toutes les réservations à la même `Voiture` si la voiture a encore assez de place.
+
+2. Intégration avec l'algorithme assignReservations (15 min)
+  - Appeler `RegroupementService` avant l'assignation individuelle.
+  - Garantir non-régression des règles existantes (capacité, priorité diesel, tie-break aléatoire).
+
+3. Tests unitaires & scénarios (10 min)
+  - Cas où toutes les réservations tiennent dans une voiture → une seule voiture assignée.
+  - Cas nécessitant plusieurs voitures.
+  - Cas de tie-break et priorisation diesel.
+
+4. Scripts de test / données d'exemple (5 min)
+  - Créer jeux de données SQL pour valider regroupement (ex: 3 réservations qui tiennent dans une seule voiture).
+
+5. UI / planning (10 min)
+  - Adapter la page de planification pour montrer les groupes de réservations assignés par véhicule.
+
+===============================================
+ESTIMATION TOTALE: 60 min
+===============================================
