@@ -1,13 +1,13 @@
 -- Supprimer la base si elle existe
 \c postgres;
 
-DROP DATABASE IF EXISTS reservation;
+DROP DATABASE IF EXISTS reservation_sprint5;
 
 -- Créer la base
-CREATE DATABASE reservation;
+CREATE DATABASE reservation_sprint5;
 
 -- Se connecter à la base
-\c reservation;
+\c reservation_sprint5;
 
 -- Create hotel table if missing
 CREATE TABLE IF NOT EXISTS hotel (

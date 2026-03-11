@@ -1,6 +1,6 @@
 
 -- Se connecter à la base
-\c reservation;
+\c reservation_sprint5;
 
 -- Table voiture
 CREATE TABLE voiture (

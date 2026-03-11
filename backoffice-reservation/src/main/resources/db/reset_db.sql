@@ -5,10 +5,10 @@
 -- ============================================================
 
 \c postgres;
-DROP DATABASE IF EXISTS reservation;
+DROP DATABASE IF EXISTS reservation_sprint5;
 
 -- Recrée la base
-CREATE DATABASE reservation;
+CREATE DATABASE reservation_sprint5;
 
 -- Exécute tous les scripts de création
 \i create_reservation.sql
@@ -18,5 +18,6 @@ CREATE DATABASE reservation;
 -- Exécute les données initiales
 \i init-database.sql
 \i init_sprint2.sql
+\i init_sprint5.sql
 
 SELECT 'Base de données réinitialisée avec succès !' AS status;
