@@ -21,7 +21,7 @@
 --   COLBERT  23 km   LOKANGA 160 km
 -- ============================================================
 
-\c reservation_sprint5;
+\c reservation;
 
 -- --------------------------------------------------------
 -- Mise à jour des paramètres pour rendre les tests lisibles

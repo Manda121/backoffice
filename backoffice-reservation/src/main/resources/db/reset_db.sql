@@ -5,10 +5,10 @@
 -- ============================================================
 
 \c postgres;
-DROP DATABASE IF EXISTS reservation_sprint5;
+DROP DATABASE IF EXISTS reservation;
 
 -- Recrée la base
-CREATE DATABASE reservation_sprint5;
+CREATE DATABASE reservation;
 
 -- Exécute tous les scripts de création
 \i create_reservation.sql
