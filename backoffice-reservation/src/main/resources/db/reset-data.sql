@@ -35,7 +35,7 @@ INSERT INTO distance (lieu_from, lieu_to, km)
 
 INSERT INTO parametre (code, valeur, description) VALUES
     ('vitesse_moyenne', '50',  'Vitesse moyenne des véhicules en km/h'),
-    ('temps_attente',   '30',  'Temps d''attente en minutes (stocké mais non utilisé dans le calcul)')
+    ('temps_attente',   '0',  'Temps d''attente en minutes (stocké mais non utilisé dans le calcul)')
 ON CONFLICT (code) DO NOTHING;
 
 -- 3. Vérification rapide

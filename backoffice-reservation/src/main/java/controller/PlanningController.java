@@ -311,11 +311,11 @@ public class PlanningController {
     private List<Reservation> getReservationsForDate(String date) throws SQLException {
         List<Reservation> list = new ArrayList<>();
         String sql = "SELECT r.id, r.id_client, r.id_hotel, r.nb_passager, r.date_heure_arrivee, " +
-                     "h.code AS lieu_code " +
-                     "FROM reservation r " +
-                     "JOIN hotel h ON h.id = r.id_hotel " +
-                     "WHERE DATE(r.date_heure_arrivee) = ? " +
-                     "ORDER BY r.date_heure_arrivee";
+             "h.code AS lieu_code " +
+             "FROM reservation r " +
+             "JOIN hotel h ON h.id = r.id_hotel " +
+             "WHERE DATE(r.date_heure_arrivee) = ? " +
+             "ORDER BY r.date_heure_arrivee, r.nb_passager DESC";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setDate(1, java.sql.Date.valueOf(date));
