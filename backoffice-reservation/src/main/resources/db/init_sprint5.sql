@@ -78,7 +78,7 @@ INSERT INTO reservation (id_client, id_hotel, nb_passager, date_heure_arrivee) V
 -- Attendu : Toyota Corolla (5 places, essence) si revenue de S1 (retour ≈ 09:20)
 -- ============================================================
 INSERT INTO reservation (id_client, id_hotel, nb_passager, date_heure_arrivee) VALUES
-    ('S301', (SELECT id FROM hotel WHERE code = 'HILTON'),  4, '2026-03-15 09:31:00');
+    ('S301', (SELECT id FROM hotel WHERE code = 'HILTON'),  28, '2026-03-15 09:27:00');
 
 -- ============================================================
 -- SCÉNARIO 4 — Limite exacte de la fenêtre (inclus vs exclus)

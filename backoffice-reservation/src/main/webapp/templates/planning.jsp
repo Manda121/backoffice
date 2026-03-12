@@ -596,8 +596,8 @@
                         <table class="plan-table">
                             <thead>
                                 <tr>
-                                    <th>Réservation</th>
                                     <th>Client</th>
+                                    <th>Réservation</th>
                                     <th>Destination</th>
                                     <th>Heure d'arrivée</th>
                                     <th>Passagers</th>
@@ -606,8 +606,8 @@
                             <tbody>
                             <% for (Reservation r : entry.getReservations()) { %>
                                 <tr>
-                                    <td><span class="res-id">R<%= r.getId() %></span></td>
-                                    <td style="color:#4a5568;"><%= r.getIdClient() %></td>
+                                    <td><span class="res-id">Client: <%= r.getIdClient() %></span></td>
+                                    <td style="color:#4a5568;">Reservation N:  <%= r.getId() %></td>
                                     <td class="hotel-code">
                                         <%= r.getLieuCode() != null ? r.getLieuCode() : "Hôtel #" + r.getIdHotel() %>
                                     </td>
