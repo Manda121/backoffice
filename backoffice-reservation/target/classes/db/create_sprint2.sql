@@ -3,7 +3,7 @@
 -- La table lieu est remplacée par des colonnes code/is_airport dans hotel
 -- ============================================================
 
-\c reservation_sprint5;
+\c reservation;
 
 -- Ajout de la colonne matricule au véhicule (si elle n'existe pas déjà)
 ALTER TABLE voiture ADD COLUMN IF NOT EXISTS matricule VARCHAR(50);

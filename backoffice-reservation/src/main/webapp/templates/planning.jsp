@@ -28,7 +28,8 @@
             align-items: center;
             gap: 0;
             border-bottom: 1px solid #e2e8f0;
-            background: #f8fafc;
+            color: #f8fafc;
+            background-color: #1e3a5f;
         }
 
         .plan-head-vehicle {
@@ -54,7 +55,7 @@
         .plan-vehicle-name {
             font-size: 14px;
             font-weight: 700;
-            color: #1e3a5f;
+            color: #e2e8f0;
             line-height: 1.3;
         }
 
@@ -88,7 +89,7 @@
         .plan-time-value {
             font-size: 17px;
             font-weight: 700;
-            color: #2d3748;
+            color: #e2e8f0;
             margin-top: 2px;
             font-variant-numeric: tabular-nums;
         }
@@ -109,7 +110,7 @@
         .plan-km-value {
             font-size: 17px;
             font-weight: 700;
-            color: #2d3748;
+            color: #e2e8f0;
         }
 
         .plan-km-label {
@@ -130,7 +131,7 @@
         .cap-label {
             font-size: 12px;
             font-weight: 600;
-            color: #4a5568;
+            color: #e2e8f0;
         }
 
         .cap-bar-wrap {
@@ -595,8 +596,8 @@
                         <table class="plan-table">
                             <thead>
                                 <tr>
-                                    <th>Réservation</th>
                                     <th>Client</th>
+                                    <th>Réservation</th>
                                     <th>Destination</th>
                                     <th>Heure d'arrivée</th>
                                     <th>Passagers</th>
@@ -605,8 +606,8 @@
                             <tbody>
                             <% for (Reservation r : entry.getReservations()) { %>
                                 <tr>
-                                    <td><span class="res-id">R<%= r.getId() %></span></td>
-                                    <td style="color:#4a5568;"><%= r.getIdClient() %></td>
+                                    <td><span class="res-id">Client: <%= r.getIdClient() %></span></td>
+                                    <td style="color:#4a5568;">Reservation N:  <%= r.getId() %></td>
                                     <td class="hotel-code">
                                         <%= r.getLieuCode() != null ? r.getLieuCode() : "Hôtel #" + r.getIdHotel() %>
                                     </td>
