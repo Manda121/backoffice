@@ -1,6 +1,7 @@
 controller\ReservationController.class
 models\Voiture.class
 models\Distance.class
+controller\PlanningController$VehicleChoice.class
 controller\LieuController.class
 controller\PlanningController$RouteCalc.class
 util\TokenUtil.class
