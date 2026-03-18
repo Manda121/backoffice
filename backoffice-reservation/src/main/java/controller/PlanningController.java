@@ -66,6 +66,9 @@ public class PlanningController {
             List<PlanningEntry> planning = assignReservations(
                     reservations, voitures, vitesseKmH, airportId, unassigned);
 
+                // --- Persistance : replanification complète pour la date ---
+                persistPlanningForDate(date, planning);
+
             mv.addItem("planning", planning);
             mv.addItem("unassigned", unassigned);
             mv.addItem("totalReservations", reservations.size());
@@ -362,6 +365,69 @@ public class PlanningController {
     // ========================
     //  HELPERS DB
     // ========================
+    private void persistPlanningForDate(String date, List<PlanningEntry> planning) throws SQLException {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                ensurePlanificationTable(conn);
+
+                try (PreparedStatement del = conn.prepareStatement(
+                        "DELETE FROM planification WHERE date_planning = ?")) {
+                    del.setDate(1, java.sql.Date.valueOf(date));
+                    del.executeUpdate();
+                }
+
+                String insertSql = "INSERT INTO planification " +
+                        "(reservation_id, voiture_id, date_planning, heure_depart, heure_arrivee_hotel, heure_retour_aeroport, distance_km) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+                try (PreparedStatement ins = conn.prepareStatement(insertSql)) {
+                    for (PlanningEntry entry : planning) {
+                        if (entry.getReservations() == null) continue;
+                        for (Reservation r : entry.getReservations()) {
+                            if (entry.getDepartureTime() == null || entry.getArrivalTime() == null || entry.getReturnToAirportTime() == null) {
+                                continue;
+                            }
+                            ins.setInt(1, r.getId());
+                            ins.setInt(2, entry.getVoiture().getId());
+                            ins.setDate(3, java.sql.Date.valueOf(date));
+                            ins.setTimestamp(4, Timestamp.valueOf(entry.getDepartureTime()));
+                            ins.setTimestamp(5, Timestamp.valueOf(entry.getArrivalTime()));
+                            ins.setTimestamp(6, Timestamp.valueOf(entry.getReturnToAirportTime()));
+                            ins.setDouble(7, entry.getTotalKm());
+                            ins.addBatch();
+                        }
+                    }
+                    ins.executeBatch();
+                }
+
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    private void ensurePlanificationTable(Connection conn) throws SQLException {
+        String ddl = "CREATE TABLE IF NOT EXISTS planification (" +
+                "id SERIAL PRIMARY KEY," +
+                "reservation_id INTEGER NOT NULL REFERENCES reservation(id) ON DELETE CASCADE," +
+                "voiture_id INTEGER NOT NULL REFERENCES voiture(id) ON DELETE CASCADE," +
+                "date_planning DATE NOT NULL," +
+                "heure_depart TIMESTAMP NOT NULL," +
+                "heure_arrivee_hotel TIMESTAMP NOT NULL," +
+                "heure_retour_aeroport TIMESTAMP NOT NULL," +
+                "distance_km DOUBLE PRECISION NOT NULL DEFAULT 0," +
+                "created_at TIMESTAMP NOT NULL DEFAULT NOW()" +
+                ")";
+        try (PreparedStatement ps = conn.prepareStatement(ddl)) {
+            ps.execute();
+        }
+    }
+
     private List<Reservation> getReservationsForDate(String date) throws SQLException {
         List<Reservation> list = new ArrayList<>();
         String sql = "SELECT r.id, r.id_client, r.id_hotel, r.nb_passager, r.date_heure_arrivee, " +
