@@ -118,8 +118,11 @@ public class PlanningController {
 
         // Heure à laquelle chaque véhicule sera de retour à l'aéroport
         Map<Integer, LocalDateTime> disponibleA = new HashMap<>();
+        // Nombre de trajets déjà effectués dans cette exécution de planification
+        Map<Integer, Integer> nbTrajets = new HashMap<>();
         for (Voiture v : voitures) {
             disponibleA.put(v.getId(), LocalDateTime.MIN);
+            nbTrajets.put(v.getId(), 0);
         }
 
         // Boucle principale : on traite les réservations groupe par groupe
@@ -177,11 +180,11 @@ public class PlanningController {
                               .sum();
 
                 // Essayer de trouver un véhicule qui prend tout le monde
-                Voiture selectionne = selectMeilleurVehicule(disponibles, totalPassagers);
+                Voiture selectionne = selectMeilleurVehicule(disponibles, totalPassagers, nbTrajets);
 
                 // Si impossible avec tous, prendre au moins la première réservation
                 if (selectionne == null) {
-                    selectionne = selectMeilleurVehicule(disponibles, premiere.getNbPassager());
+                    selectionne = selectMeilleurVehicule(disponibles, premiere.getNbPassager(), nbTrajets);
                 }
 
                 // Si toujours null : aucun véhicule disponible → réservation non assignée
@@ -241,6 +244,7 @@ public class PlanningController {
                         String.format("%.0f km", route.legKms.get(route.legKms.size() - 1))});
 
                 disponibleA.put(selectionne.getId(), retourAeroport);
+                nbTrajets.put(selectionne.getId(), nbTrajets.getOrDefault(selectionne.getId(), 0) + 1);
                 entries.add(new PlanningEntry(selectionne, lot, depart, arrivee, retourAeroport, route.totalKm, itin));
             }
 
@@ -335,9 +339,13 @@ public class PlanningController {
     }
 
     /**
-     * Sélectionne le meilleur véhicule selon les règles 1-4 du cahier des charges.
+     * Sélectionne le meilleur véhicule selon les règles :
+     *  1) capacité minimale suffisante
+     *  2) moins de trajets déjà effectués
+     *  3) priorité carburant (diesel, puis essence, puis hybride)
      */
-    private Voiture selectMeilleurVehicule(List<Voiture> candidats, int passagersNecessaires) {
+    private Voiture selectMeilleurVehicule(List<Voiture> candidats, int passagersNecessaires,
+                                           Map<Integer, Integer> nbTrajets) {
         // Règle 1 : capacité >= passagers nécessaires
         List<Voiture> eligibles = candidats.stream()
                 .filter(v -> v.getNbPlace() >= passagersNecessaires)
@@ -351,15 +359,19 @@ public class PlanningController {
                 .filter(v -> v.getNbPlace() == minCapacite)
                 .collect(Collectors.toList());
 
-        // Règle 3 : priorité au Diesel
-        List<Voiture> diesel = optimaux.stream()
-                .filter(v -> v.getCarburant() == 'd')
-                .collect(Collectors.toList());
+        // Règle 2 puis 3 : moins de trajets, puis priorité carburant
+        optimaux.sort(Comparator
+            .comparingInt((Voiture v) -> nbTrajets.getOrDefault(v.getId(), 0))
+            .thenComparingInt(v -> fuelRank(v.getCarburant()))
+            .thenComparingInt(Voiture::getId));
 
-        List<Voiture> pool = !diesel.isEmpty() ? diesel : optimaux;
+        return optimaux.get(0);
+        }
 
-        // Règle 4 : choix aléatoire parmi les ex-aequo
-        return pool.get(new Random().nextInt(pool.size()));
+        private int fuelRank(char carburant) {
+        if (carburant == 'd') return 0;
+        if (carburant == 'e') return 1;
+        return 2;
     }
 
     // ========================
