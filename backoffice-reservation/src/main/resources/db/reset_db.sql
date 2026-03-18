@@ -47,6 +47,21 @@ CREATE TABLE voiture (
 );
 
 -- ============================================================
+-- TABLE : planification
+-- ============================================================
+CREATE TABLE planification (
+    id                     SERIAL PRIMARY KEY,
+    reservation_id         INTEGER NOT NULL REFERENCES reservation(id) ON DELETE CASCADE,
+    voiture_id             INTEGER NOT NULL REFERENCES voiture(id) ON DELETE CASCADE,
+    date_planning          DATE NOT NULL,
+    heure_depart           TIMESTAMP NOT NULL,
+    heure_arrivee_hotel    TIMESTAMP NOT NULL,
+    heure_retour_aeroport  TIMESTAMP NOT NULL,
+    distance_km            DOUBLE PRECISION NOT NULL DEFAULT 0,
+    created_at             TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- ============================================================
 -- TABLE : token
 -- ============================================================
 CREATE TABLE token (

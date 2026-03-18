@@ -10,7 +10,7 @@
 -- ============================================================
 -- 1. Vider toutes les tables et remettre les séquences à zéro
 -- ============================================================
-TRUNCATE TABLE reservation, distance, hotel, voiture, token, parametre
+TRUNCATE TABLE planification, reservation, distance, hotel, voiture, token, parametre
     RESTART IDENTITY CASCADE;
 
 -- ============================================================
@@ -73,4 +73,6 @@ SELECT 'token',                    COUNT(*) FROM token
 UNION ALL
 SELECT 'distance',                 COUNT(*) FROM distance
 UNION ALL
-SELECT 'parametre',                COUNT(*) FROM parametre;
+SELECT 'parametre',                COUNT(*) FROM parametre
+UNION ALL
+SELECT 'planification',            COUNT(*) FROM planification;
