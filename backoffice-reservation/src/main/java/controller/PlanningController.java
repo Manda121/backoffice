@@ -125,27 +125,62 @@ public class PlanningController {
             nbTrajets.put(v.getId(), 0);
         }
 
-        // Boucle principale : on traite les réservations groupe par groupe
-        int i = 0;
-        while (i < reservations.size()) {
-            // Trouver la prochaine réservation non assignée
-            while (i < reservations.size() && assigned[i]) i++;
-            if (i >= reservations.size()) break;
+        // Report intelligent: une réservation non assignée (véhicules en trajet)
+        // ne peut être rejouée que dans une tranche ultérieure hors fenêtre initiale.
+        Map<Integer, LocalDateTime> reportEligibleAfter = new HashMap<>();
 
-            // --- Heure initiale du groupe = heure d'arrivée de la 1ère réservation non assignée ---
-            LocalDateTime heureInitiale = reservations.get(i).getDateHeureArrivee().toLocalDateTime();
+        // Boucle principale : on traite les réservations groupe par groupe
+        while (true) {
+            // Trouver la prochaine réservation "active" (non assignée et non bloquée par report)
+            Integer anchorIdx = null;
+            LocalDateTime anchorTime = null;
+            for (int idx = 0; idx < reservations.size(); idx++) {
+                if (assigned[idx]) continue;
+                Reservation r = reservations.get(idx);
+                LocalDateTime t = r.getDateHeureArrivee().toLocalDateTime();
+                LocalDateTime deferAfter = reportEligibleAfter.get(r.getId());
+
+                // Une réservation reportée ne doit pas redevenir ancre via son ancienne heure.
+                // Elle sera réintégrée quand une nouvelle ancre (nouvelle réservation) ouvrira
+                // une tranche avec heureInitiale > deferAfter.
+                boolean isActiveAnchor = (deferAfter == null);
+                if (!isActiveAnchor) continue;
+
+                if (anchorTime == null || t.isBefore(anchorTime)) {
+                    anchorTime = t;
+                    anchorIdx = idx;
+                }
+            }
+
+            if (anchorIdx == null) break;
+
+            // --- Heure initiale du groupe = heure d'arrivée de l'ancre active ---
+            LocalDateTime heureInitiale = reservations.get(anchorIdx).getDateHeureArrivee().toLocalDateTime();
             LocalDateTime fenetreMax    = heureInitiale.plusMinutes(tempsAttenteMin);
 
             // --- Collecter TOUS les indices non assignés dont l'heure ≤ heureInitiale + tempsAttente ---
             List<Integer> groupeIdx = new ArrayList<>();
-            for (int j = i; j < reservations.size(); j++) {
+            for (int j = 0; j < reservations.size(); j++) {
                 if (!assigned[j]) {
                     LocalDateTime t = reservations.get(j).getDateHeureArrivee().toLocalDateTime();
-                    if (!t.isAfter(fenetreMax)) {
+                    LocalDateTime deferAfter = reportEligibleAfter.get(reservations.get(j).getId());
+                    boolean deferOk = (deferAfter == null) || heureInitiale.isAfter(deferAfter);
+                    if (!t.isAfter(fenetreMax) && deferOk) {
                         groupeIdx.add(j);
                     }
                 }
             }
+
+            if (groupeIdx.isEmpty()) {
+                continue;
+            }
+
+            // Priorité de traitement: passagers décroissants
+            groupeIdx.sort(
+                    Comparator.comparingInt((Integer idx) -> reservations.get(idx).getNbPassager())
+                              .reversed()
+                              .thenComparing(idx -> reservations.get(idx).getDateHeureArrivee().toLocalDateTime())
+            );
 
             // --- Heure de départ réelle = heure d'arrivée de la DERNIÈRE réservation du groupe ---
             LocalDateTime depart = groupeIdx.stream()
@@ -153,10 +188,10 @@ public class PlanningController {
                     .max(Comparator.naturalOrder())
                     .orElse(heureInitiale);
 
-            // --- Véhicules disponibles à heureInitiale ---
-            final LocalDateTime hInit = heureInitiale;
+                // --- Véhicules disponibles avant fin de tranche ---
+                final LocalDateTime hMax = fenetreMax;
             List<Voiture> disponibles = voitures.stream()
-                    .filter(v -> !disponibleA.get(v.getId()).isAfter(hInit))
+                    .filter(v -> !disponibleA.get(v.getId()).isAfter(hMax))
                     .collect(Collectors.toList());
 
             // --- Distribuer les réservations du groupe en lots (un véhicule par lot) ---
@@ -191,16 +226,20 @@ public class PlanningController {
                 if (selectionne == null) {
                     boolean capaciteInsuffisante = voitures.stream()
                             .noneMatch(v -> v.getNbPlace() >= premiere.getNbPassager());
-                    String timeStr = String.format("%dh%02d", depart.getHour(), depart.getMinute());
-                    String reason = capaciteInsuffisante
-                            ? "Capacité insuffisante (" + premiere.getNbPassager()
-                              + " passager(s) requis, max disponible : "
-                              + voitures.stream().mapToInt(Voiture::getNbPlace).max().orElse(0) + " places)"
-                            : "Aucun véhicule disponible à " + timeStr;
-                    premiere.setUnassignedReason(reason);
-                    unassigned.add(premiere);
                     groupeAssigned[gi] = true;
-                    assigned[firstIdx] = true;
+
+                    if (capaciteInsuffisante) {
+                        String reason = "Capacité insuffisante (" + premiere.getNbPassager()
+                                + " passager(s) requis, max disponible : "
+                                + voitures.stream().mapToInt(Voiture::getNbPlace).max().orElse(0) + " places)";
+                        premiere.setUnassignedReason(reason);
+                        unassigned.add(premiere);
+                        assigned[firstIdx] = true;
+                    } else {
+                        // Report intelligent : rejouer seulement dans une tranche ultérieure
+                        // dont l'heure initiale dépasse la fin de la fenêtre actuelle.
+                        reportEligibleAfter.put(premiere.getId(), fenetreMax);
+                    }
                     continue;
                 }
 
@@ -228,9 +267,16 @@ public class PlanningController {
                         .collect(Collectors.toList());
 
                 // --- Calculer les horaires, distance et itinéraire ---
+                // Ajustement: si la voiture revient pendant la tranche, le départ se fait à son retour.
+                LocalDateTime departEffectif = depart;
+                LocalDateTime retourDisponible = disponibleA.get(selectionne.getId());
+                if (retourDisponible != null && retourDisponible.isAfter(departEffectif) && !retourDisponible.isAfter(fenetreMax)) {
+                    departEffectif = retourDisponible;
+                }
+
                 RouteCalc route = calculateRoute(lot, airportId, vitesseKmH, hotelCodeMap);
-                LocalDateTime arrivee        = depart.plusMinutes(route.minsToLastHotel);
-                LocalDateTime retourAeroport = depart.plusMinutes(route.totalRouteMinutes);
+                LocalDateTime arrivee        = departEffectif.plusMinutes(route.minsToLastHotel);
+                LocalDateTime retourAeroport = departEffectif.plusMinutes(route.totalRouteMinutes);
 
                 // Construire les étapes d'itinéraire
                 List<String[]> itin = new ArrayList<>();
@@ -245,11 +291,22 @@ public class PlanningController {
 
                 disponibleA.put(selectionne.getId(), retourAeroport);
                 nbTrajets.put(selectionne.getId(), nbTrajets.getOrDefault(selectionne.getId(), 0) + 1);
-                entries.add(new PlanningEntry(selectionne, lot, depart, arrivee, retourAeroport, route.totalKm, itin));
+                entries.add(new PlanningEntry(selectionne, lot, departEffectif, arrivee, retourAeroport, route.totalKm, itin));
             }
+        }
 
-            // Avancer i au-delà du groupe courant
-            i = groupeIdx.get(groupeIdx.size() - 1) + 1;
+        // Finaliser les réservations restantes non assignées (ex: report sans tranche ultérieure)
+        for (int idx = 0; idx < reservations.size(); idx++) {
+            if (!assigned[idx]) {
+                Reservation r = reservations.get(idx);
+                if (r.getUnassignedReason() == null || r.getUnassignedReason().trim().isEmpty()) {
+                    LocalDateTime t = r.getDateHeureArrivee().toLocalDateTime();
+                    String timeStr = String.format("%02dh%02d", t.getHour(), t.getMinute());
+                    r.setUnassignedReason("Aucun véhicule compatible disponible après report (arrivée " + timeStr + ")");
+                }
+                unassigned.add(r);
+                assigned[idx] = true;
+            }
         }
 
         return entries;
