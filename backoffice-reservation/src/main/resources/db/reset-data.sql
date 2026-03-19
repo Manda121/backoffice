@@ -18,7 +18,8 @@ TRUNCATE TABLE planification, reservation, distance, hotel, voiture, token, para
 -- ============================================================
 INSERT INTO hotel (name, ville, adresse, code, is_airport) VALUES
     ('Aéroport d''Ivato', 'Ivato',         'BP 4009, Ivato, Antananarivo', 'IVATO',  TRUE),
-    ('Hotel 1',           'Antananarivo',  'Avenue de l''Indépendance',   'HOTEL1', FALSE);
+    ('Hotel 1',          'Antananarivo',  'Avenue de l''Indépendance',   'HOTEL1', FALSE);
+    
 
 -- ============================================================
 -- 3. Voitures  (id 1..4)
