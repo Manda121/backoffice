@@ -24,11 +24,11 @@ INSERT INTO hotel (name, ville, adresse, code, is_airport) VALUES
 -- ============================================================
 -- 3. Voitures  (id 1..4)
 -- ============================================================
-INSERT INTO voiture (marque, nb_place, type, matricule, carburant) VALUES
-    ('Toyota HiAce',  12, 'Minibus', 'MAD-001', 'd'),
-    ('Toyota Corolla', 5, 'Berline', 'MAD-002', 'e'),
-    ('Renault Trafic', 5, 'Van',     'MAD-003', 'd'),
-    ('Hyundai H1',    12, 'Van',     'MAD-004', 'e');
+INSERT INTO voiture (marque, nb_place, type, matricule, carburant, heure_disponible) VALUES
+    ('Toyota HiAce',  12, 'Minibus', 'MAD-001', 'd', '2026-03-12 10:00:00'),
+    ('Toyota Corolla', 5, 'Berline', 'MAD-002', 'e', '2026-03-12 10:00:00'),
+    ('Renault Trafic', 5, 'Van',     'MAD-003', 'd', '2026-03-12 10:00:00'),
+    ('Hyundai H1',    12, 'Van',     'MAD-004', 'e', '2026-03-12 10:00:00');
 
 -- ============================================================
 -- 4. Réservations  (référence hotel id 2 = HOTEL1)
