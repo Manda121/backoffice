@@ -25,17 +25,16 @@ INSERT INTO hotel (name, ville, adresse, code, is_airport) VALUES
 -- 3. Voitures  (id 1..4)
 -- ============================================================
 INSERT INTO voiture (marque, nb_place, type, matricule, carburant, heure_disponible) VALUES
-    ('v1',  7, 'Minibus', 'MAD-001', 'd', '2026-03-12 10:00:00'),
-    ('v2',  4, 'Berline', 'MAD-002', 'e', '2026-03-12 10:00:00');
+    ('v1',  8, 'Minibus', 'MAD-001', 'd', '2026-03-12 00:00:00'),
+    ('v2',  3, 'Berline', 'MAD-002', 'e', '2026-03-12 00:00:00');
 
 -- ============================================================
 -- 4. Réservations  (référence hotel id 2 = HOTEL1)
 -- ============================================================
 INSERT INTO reservation (id_client, id_hotel, nb_passager, date_heure_arrivee, nom) VALUES
-    ('cli1', 2,  8, '2026-03-12 09:00:00', 'Dupont'),
-    ('cli2', 2,  6, '2026-03-12 10:00:00', 'Dupont'),
-    ('cli3', 2, 3, '2026-03-12 10:00:00', 'Dupont'),
-    ('cli4', 2,  2, '2026-03-12 10:00:00', 'Dupont');
+    ('cli1', 2,  6, '2026-03-12 09:00:00', 'Dupont'),
+    ('cli2', 2,  4, '2026-03-12 10:00:00', 'Dupont'),
+    ('cli3', 2,  3, '2026-03-12 10:00:00', 'Dupont');
     
 
 -- ============================================================
