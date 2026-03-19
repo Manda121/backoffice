@@ -432,7 +432,7 @@
     <!-- MAIN -->
     <div class="main-content">
         <header class="topbar">
-            <div class="page-title">📊 Planning des Véhicules</div>
+            <div class="page-title">ETU003280 - ETU003377 - ETU003354</div>
             <div class="breadcrumb">Accueil / Planning</div>
         </header>
 
