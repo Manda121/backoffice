@@ -5,7 +5,7 @@
 -- Prérequis : base "reservation" créée via reset_db.sql
 -- ============================================================
 
-\c reservation;
+\c reservationsprint7;
 
 -- ============================================================
 -- 1. Vider toutes les tables et remettre les séquences à zéro

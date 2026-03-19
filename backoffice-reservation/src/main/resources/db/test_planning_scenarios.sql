@@ -5,7 +5,7 @@
 -- Ensuite, dans l'app, cliquer "Planifier" pour chaque date de scénario.
 -- ============================================================
 
-\c reservation;
+\c reservationsprint7;
 
 -- Nettoyage global
 TRUNCATE TABLE planification, reservation, distance, hotel, voiture, token, parametre
