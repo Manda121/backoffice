@@ -282,13 +282,19 @@ public class PlanningController {
                 List<Reservation> lot = new ArrayList<>();
                 int capaciteRestante = selectionne.getNbPlace();
 
-                // 1) Toujours commencer par la réservation ayant le plus grand reliquat
-                int restantPremier = remainingPassengers[firstIdx];
+                // 1) Choisir d'abord la réservation la plus proche de la capacité du véhicule
+                //    (en cas d'égalité: plus grand reliquat).
+                Integer startIdx = pickBestGapReservationIndex(indicesActifs, remainingPassengers, capacitiesafe(capaciteRestante));
+                if (startIdx == null) {
+                    startIdx = firstIdx;
+                }
+
+                int restantPremier = remainingPassengers[startIdx];
                 if (restantPremier > 0 && capaciteRestante > 0) {
                     int affectes = Math.min(restantPremier, capaciteRestante);
-                    Reservation part = copyReservationWithPassengers(reservations.get(firstIdx), affectes);
+                    Reservation part = copyReservationWithPassengers(reservations.get(startIdx), affectes);
                     lot.add(part);
-                    remainingPassengers[firstIdx] -= affectes;
+                    remainingPassengers[startIdx] -= affectes;
                     capaciteRestante -= affectes;
                 }
 
