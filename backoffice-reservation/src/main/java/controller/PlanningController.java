@@ -137,44 +137,70 @@ public class PlanningController {
         // Report intelligent: une réservation non assignée (véhicules en trajet)
         // ne peut être rejouée que dans une tranche ultérieure hors fenêtre initiale.
         Map<Integer, LocalDateTime> reportEligibleAfter = new HashMap<>();
+        // File d'attente des réservations non assignées faute de véhicule disponible
+        Deque<Integer> waitingQueue = new ArrayDeque<>();
+        Set<Integer> waitingSet = new HashSet<>();
 
         // Boucle principale : on traite les réservations groupe par groupe
         while (true) {
+            waitingQueue.removeIf(idx -> remainingPassengers[idx] <= 0);
+            waitingSet.removeIf(idx -> remainingPassengers[idx] <= 0);
+
             // Trouver la prochaine réservation "active" (non assignée et non bloquée par report)
             Integer anchorIdx = null;
             LocalDateTime anchorTime = null;
-            for (int idx = 0; idx < reservations.size(); idx++) {
-                if (remainingPassengers[idx] <= 0) continue;
-                Reservation r = reservations.get(idx);
-                LocalDateTime t = r.getDateHeureArrivee().toLocalDateTime();
-                LocalDateTime deferAfter = reportEligibleAfter.get(r.getId());
+            boolean backlogActive = !waitingQueue.isEmpty();
+            if (backlogActive) {
+                anchorIdx = waitingQueue.peek();
+                anchorTime = reservations.get(anchorIdx).getDateHeureArrivee().toLocalDateTime();
+                LocalDateTime earliestVehicle = getEarliestVoitureDispo(voitures, disponibleA);
+                if (earliestVehicle != null && earliestVehicle.isAfter(anchorTime)) {
+                    anchorTime = earliestVehicle;
+                }
+            } else {
+                for (int idx = 0; idx < reservations.size(); idx++) {
+                    if (remainingPassengers[idx] <= 0) continue;
+                    Reservation r = reservations.get(idx);
+                    LocalDateTime t = r.getDateHeureArrivee().toLocalDateTime();
+                    LocalDateTime deferAfter = reportEligibleAfter.get(r.getId());
 
-                // Une réservation reportée ne doit pas redevenir ancre via son ancienne heure.
-                // Elle sera réintégrée quand une nouvelle ancre (nouvelle réservation) ouvrira
-                // une tranche avec heureInitiale > deferAfter.
-                boolean isActiveAnchor = (deferAfter == null);
-                if (!isActiveAnchor) continue;
+                    // Une réservation reportée ne doit pas redevenir ancre via son ancienne heure.
+                    // Elle sera réintégrée quand une nouvelle ancre (nouvelle réservation) ouvrira
+                    // une tranche avec heureInitiale > deferAfter.
+                    boolean isActiveAnchor = (deferAfter == null);
+                    if (!isActiveAnchor) continue;
 
-                if (anchorTime == null || t.isBefore(anchorTime)) {
-                    anchorTime = t;
-                    anchorIdx = idx;
+                    if (anchorTime == null || t.isBefore(anchorTime)) {
+                        anchorTime = t;
+                        anchorIdx = idx;
+                    }
                 }
             }
 
             if (anchorIdx == null) break;
 
             // --- Heure initiale du groupe = heure d'arrivée de l'ancre active ---
-            LocalDateTime heureInitiale = reservations.get(anchorIdx).getDateHeureArrivee().toLocalDateTime();
+            LocalDateTime heureInitiale = (anchorTime != null)
+                    ? anchorTime
+                    : reservations.get(anchorIdx).getDateHeureArrivee().toLocalDateTime();
             LocalDateTime fenetreMax    = heureInitiale.plusMinutes(tempsAttenteMin);
 
             // --- Collecter TOUS les indices non assignés dont l'heure ≤ heureInitiale + tempsAttente ---
             List<Integer> groupeIdx = new ArrayList<>();
+            if (backlogActive) {
+                for (Integer idx : waitingQueue) {
+                    if (remainingPassengers[idx] > 0) {
+                        groupeIdx.add(idx);
+                    }
+                }
+            }
             for (int j = 0; j < reservations.size(); j++) {
                 if (remainingPassengers[j] > 0) {
                     LocalDateTime t = reservations.get(j).getDateHeureArrivee().toLocalDateTime();
                     LocalDateTime deferAfter = reportEligibleAfter.get(reservations.get(j).getId());
                     boolean deferOk = (deferAfter == null) || heureInitiale.isAfter(deferAfter);
                     if (!t.isAfter(fenetreMax) && deferOk) {
+                        if (backlogActive && waitingSet.contains(j)) continue;
                         groupeIdx.add(j);
                     }
                 }
@@ -184,18 +210,20 @@ public class PlanningController {
                 continue;
             }
 
-            // Priorité de traitement: passagers décroissants
-            groupeIdx.sort(
-                    Comparator.comparingInt((Integer idx) -> reservations.get(idx).getNbPassager())
-                              .reversed()
-                              .thenComparing(idx -> reservations.get(idx).getDateHeureArrivee().toLocalDateTime())
-            );
+            // Priorité de traitement: réservations en attente d'abord, puis passagers décroissants
+            Comparator<Integer> groupComparator = Comparator
+                    .comparingInt((Integer idx) -> (backlogActive && waitingSet.contains(idx)) ? 0 : 1)
+                    .thenComparingInt((Integer idx) -> reservations.get(idx).getNbPassager())
+                    .reversed()
+                    .thenComparing(idx -> reservations.get(idx).getDateHeureArrivee().toLocalDateTime());
+            groupeIdx.sort(groupComparator);
 
-            // --- Heure de départ réelle = heure d'arrivée de la DERNIÈRE réservation du groupe ---
-            LocalDateTime depart = groupeIdx.stream()
+                // --- Heure de départ théorique = heure d'arrivée de la DERNIÈRE réservation du groupe ---
+                LocalDateTime lastArrival = groupeIdx.stream()
                     .map(idx -> reservations.get(idx).getDateHeureArrivee().toLocalDateTime())
                     .max(Comparator.naturalOrder())
                     .orElse(heureInitiale);
+                LocalDateTime depart = lastArrival;
 
                 // --- Véhicules disponibles ---
                 // Règle: pour le 1er trajet de la journée, une voiture doit être
@@ -218,10 +246,10 @@ public class PlanningController {
             while (true) {
                 List<Integer> indicesActifs = groupeIdx.stream()
                         .filter(idx -> remainingPassengers[idx] > 0)
-                        .sorted(Comparator
-                                .comparingInt((Integer idx) -> remainingPassengers[idx])
-                                .reversed()
-                                .thenComparing(idx -> reservations.get(idx).getDateHeureArrivee().toLocalDateTime()))
+                    .sorted(Comparator
+                        .comparingInt((Integer idx) -> waitingSet.contains(idx) ? 0 : 1)
+                        .thenComparing((Integer idx) -> remainingPassengers[idx], Comparator.reverseOrder())
+                        .thenComparing(idx -> reservations.get(idx).getDateHeureArrivee().toLocalDateTime()))
                         .collect(Collectors.toList());
 
                 if (indicesActifs.isEmpty()) break;
@@ -261,16 +289,22 @@ public class PlanningController {
                         unassigned.add(reliquat);
                         remainingPassengers[firstIdx] = 0;
                     } else if (blockedByStartAvailability) {
-                    Reservation reliquat = copyReservationWithPassengers(premiere, remainingPassengers[firstIdx]);
-                    LocalDateTime firstDispo = getEarliestVoitureDispo(voitures, disponibleA);
-                    String firstDispoStr = firstDispo != null
-                        ? String.format("%02dh%02d", firstDispo.getHour(), firstDispo.getMinute())
-                        : "inconnue";
-                    reliquat.setUnassignedReason(
-                        "Aucun véhicule disponible à l'heure d'arrivée (1ère disponibilité: " + firstDispoStr + ")");
-                    unassigned.add(reliquat);
-                    remainingPassengers[firstIdx] = 0;
+                        Reservation reliquat = copyReservationWithPassengers(premiere, remainingPassengers[firstIdx]);
+                        LocalDateTime firstDispo = getEarliestVoitureDispo(voitures, disponibleA);
+                        String firstDispoStr = firstDispo != null
+                                ? String.format("%02dh%02d", firstDispo.getHour(), firstDispo.getMinute())
+                                : "inconnue";
+                        reliquat.setUnassignedReason(
+                                "Aucun véhicule disponible à l'heure d'arrivée (1ère disponibilité: " + firstDispoStr + ")");
+                        unassigned.add(reliquat);
+                        remainingPassengers[firstIdx] = 0;
                     } else {
+                        // Aucun véhicule actuellement disponible : mettre le reliquat en attente prioritaire
+                        for (int idx : indicesActifs) {
+                            if (remainingPassengers[idx] > 0 && waitingSet.add(idx)) {
+                                waitingQueue.add(idx);
+                            }
+                        }
                         // Report intelligent : rejouer seulement dans une tranche ultérieure
                         // dont l'heure initiale dépasse la fin de la fenêtre actuelle.
                         reportEligibleAfter.put(premiere.getId(), fenetreMax);
@@ -288,6 +322,7 @@ public class PlanningController {
                 if (startIdx == null) {
                     startIdx = firstIdx;
                 }
+                boolean lotHasBacklog = waitingSet.contains(startIdx);
 
                 int restantPremier = remainingPassengers[startIdx];
                 if (restantPremier > 0 && capaciteRestante > 0) {
@@ -312,6 +347,9 @@ public class PlanningController {
 
                     remainingPassengers[bestIdx] -= affectes;
                     capaciteRestante -= affectes;
+                    if (waitingSet.contains(bestIdx)) {
+                        lotHasBacklog = true;
+                    }
                 }
 
                 if (lot.isEmpty()) {
@@ -328,8 +366,22 @@ public class PlanningController {
                 // Ajustement: si la voiture revient pendant la tranche, le départ se fait à son retour.
                 LocalDateTime departEffectif = depart;
                 LocalDateTime retourDisponible = disponibleA.get(selectionne.getId());
-                if (retourDisponible != null && retourDisponible.isAfter(departEffectif) && !retourDisponible.isAfter(fenetreMax)) {
+                if (retourDisponible != null && retourDisponible.isAfter(departEffectif)) {
                     departEffectif = retourDisponible;
+                }
+                if (departEffectif.isBefore(heureInitiale)) {
+                    departEffectif = heureInitiale;
+                }
+                // Si une réservation en attente remplit le véhicule, départ immédiat dès retour
+                if (lotHasBacklog && capaciteRestante == 0 && retourDisponible != null) {
+                    departEffectif = retourDisponible.isAfter(departEffectif) ? retourDisponible : departEffectif;
+                }
+                // Si une réservation en attente n'a pas rempli le véhicule, attendre la fin de la fenêtre
+                if (lotHasBacklog && capaciteRestante > 0) {
+                    LocalDateTime attenteBacklog = heureInitiale.plusMinutes(tempsAttenteMin);
+                    if (attenteBacklog.isAfter(departEffectif)) {
+                        departEffectif = attenteBacklog;
+                    }
                 }
 
                 RouteCalc route = calculateRoute(lot, airportId, vitesseKmH, hotelCodeMap);

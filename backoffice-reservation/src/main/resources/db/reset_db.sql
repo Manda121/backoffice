@@ -5,9 +5,9 @@
 -- ============================================================
 
 \c postgres;
-DROP DATABASE IF EXISTS reservationsprint8;
-CREATE DATABASE reservationsprint8;
-\c reservationsprint8;
+DROP DATABASE IF EXISTS reservation;
+CREATE DATABASE reservation;
+\c reservation;
 
 -- ============================================================
 -- TABLE : hotel
