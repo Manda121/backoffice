@@ -35,7 +35,6 @@ INSERT INTO reservation (id_client, id_hotel, nb_passager, date_heure_arrivee, n
     ('cli1', 2,  6, '2026-03-12 09:00:00', 'Dupont'),
     ('cli2', 2,  4, '2026-03-12 10:00:00', 'Dupont'),
     ('cli3', 2,  3, '2026-03-12 10:00:00', 'Dupont');
-    
 
 -- ============================================================
 -- 5. Tokens
