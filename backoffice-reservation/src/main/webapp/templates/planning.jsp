@@ -545,7 +545,7 @@
 
                         <%-- Vehicle info --%>
                         <div class="plan-head-vehicle">
-                            <div class="plan-num"><%= entryNum %></div>
+                            <div class="plan-num"> V<%= v.getId() %></div>
                             <div>
                                 <div class="plan-vehicle-name">
                                     <%= v.getMatricule() != null ? v.getMatricule() : "Véhicule #" + v.getId() %>
