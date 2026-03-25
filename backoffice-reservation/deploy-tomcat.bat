@@ -4,7 +4,7 @@ echo Build et deploiement sur Tomcat
 echo ========================================
 
 set TOMCAT_WEBAPPS=C:\apache-tomcat-10.1.28\webapps
-set WAR_NAME=backoffice-reservation.war
+set WAR_NAME=backoffice-reservation-sprint-7.war
 
 echo.
 echo [1/2] Compilation du projet...
@@ -22,7 +22,7 @@ copy /Y "target\%WAR_NAME%" "%TOMCAT_WEBAPPS%\%WAR_NAME%"
 
 echo.
 echo Deploiement termine.
-echo Acces: http://localhost:8080/backoffice-reservation/reservation/form
+echo Acces: http://localhost:8080/%WAR_NAME%/
 
 :end
 echo.

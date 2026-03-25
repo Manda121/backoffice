@@ -432,7 +432,7 @@
     <!-- MAIN -->
     <div class="main-content">
         <header class="topbar">
-            <div class="page-title">📊 Planning des Véhicules</div>
+            <div class="page-title">ETU003280 - ETU003377 - ETU003354</div>
             <div class="breadcrumb">Accueil / Planning</div>
         </header>
 
@@ -614,7 +614,7 @@
                                     <td class="res-arrive">
                                         <%= r.getDateHeureArrivee() != null ? sdfH.format(r.getDateHeureArrivee()) : "—" %>
                                     </td>
-                                    <td class="pax-count"><%= r.getNbPassager() %> pax</td>
+                                    <td class="pax-count"><%= r.getNbPassager() %> passager(s)</td>
                                 </tr>
                             <% } %>
                             </tbody>
@@ -674,7 +674,7 @@
                             <td class="res-arrive">
                                 <%= r.getDateHeureArrivee() != null ? sdfH.format(r.getDateHeureArrivee()) : "—" %>
                             </td>
-                            <td class="pax-count"><%= r.getNbPassager() %> pax</td>
+                            <td class="pax-count"><%= r.getNbPassager() %> passager(s)</td>
                             <td class="reason-text">
                                 <%= r.getUnassignedReason() != null ? r.getUnassignedReason() : "Aucun véhicule disponible" %>
                             </td>

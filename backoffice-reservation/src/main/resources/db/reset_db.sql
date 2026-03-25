@@ -5,9 +5,9 @@
 -- ============================================================
 
 \c postgres;
-DROP DATABASE IF EXISTS reservation;
-CREATE DATABASE reservation;
-\c reservation;
+DROP DATABASE IF EXISTS reservationsprint7;
+CREATE DATABASE reservationsprint7;
+\c reservationsprint7;
 
 -- ============================================================
 -- TABLE : hotel
@@ -43,7 +43,8 @@ CREATE TABLE voiture (
     nb_place  INTEGER      NOT NULL,
     type      VARCHAR(255) NOT NULL,
     matricule VARCHAR(255) NOT NULL,
-    carburant CHAR(1)      NOT NULL CHECK (carburant IN ('d', 'e', 'h'))
+    carburant CHAR(1)      NOT NULL CHECK (carburant IN ('d', 'e', 'h')),
+    heure_disponible TIME NOT NULL DEFAULT '00:00:00'
 );
 
 -- ============================================================

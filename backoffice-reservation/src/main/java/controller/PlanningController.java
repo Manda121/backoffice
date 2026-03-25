@@ -1,7 +1,9 @@
 package controller;
 
 import java.sql.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -63,8 +65,9 @@ public class PlanningController {
 
             // --- Algorithme d'assignation ---
             List<Reservation> unassigned = new ArrayList<>();
+                LocalDate planningDate = LocalDate.parse(date);
             List<PlanningEntry> planning = assignReservations(
-                    reservations, voitures, vitesseKmH, airportId, unassigned);
+                    reservations, voitures, vitesseKmH, airportId, planningDate, unassigned);
 
                 // --- Persistance : replanification complète pour la date ---
                 persistPlanningForDate(date, planning);
@@ -106,22 +109,28 @@ public class PlanningController {
             List<Voiture> voitures,
             double vitesseKmH,
             int airportId,
+            LocalDate planningDate,
             List<Reservation> unassigned) throws SQLException {
         // NOTE: tempsAttenteMin is fetched in computePlanning and passed indirectly;
         //       we re-fetch it here so this method remains self-contained.
         int tempsAttenteMin = ParametreController.getParamInt("temps_attente", 30);
 
         List<PlanningEntry> entries = new ArrayList<>();
-        boolean[] assigned = new boolean[reservations.size()];
+        int[] remainingPassengers = new int[reservations.size()];
+        for (int i = 0; i < reservations.size(); i++) {
+            remainingPassengers[i] = Math.max(0, reservations.get(i).getNbPassager());
+        }
         Map<Integer, String> hotelCodeMap = getHotelCodeMap();
         String airportCode = hotelCodeMap.getOrDefault(airportId, "IVATO");
+        Map<Integer, LocalDateTime> disponibiliteInitiale = getVoitureDisponibiliteInitiale(planningDate);
 
         // Heure à laquelle chaque véhicule sera de retour à l'aéroport
         Map<Integer, LocalDateTime> disponibleA = new HashMap<>();
         // Nombre de trajets déjà effectués dans cette exécution de planification
         Map<Integer, Integer> nbTrajets = new HashMap<>();
         for (Voiture v : voitures) {
-            disponibleA.put(v.getId(), LocalDateTime.MIN);
+            LocalDateTime dispoInitiale = disponibiliteInitiale.get(v.getId());
+            disponibleA.put(v.getId(), dispoInitiale != null ? dispoInitiale : LocalDateTime.MIN);
             nbTrajets.put(v.getId(), 0);
         }
 
@@ -135,7 +144,7 @@ public class PlanningController {
             Integer anchorIdx = null;
             LocalDateTime anchorTime = null;
             for (int idx = 0; idx < reservations.size(); idx++) {
-                if (assigned[idx]) continue;
+                if (remainingPassengers[idx] <= 0) continue;
                 Reservation r = reservations.get(idx);
                 LocalDateTime t = r.getDateHeureArrivee().toLocalDateTime();
                 LocalDateTime deferAfter = reportEligibleAfter.get(r.getId());
@@ -161,7 +170,7 @@ public class PlanningController {
             // --- Collecter TOUS les indices non assignés dont l'heure ≤ heureInitiale + tempsAttente ---
             List<Integer> groupeIdx = new ArrayList<>();
             for (int j = 0; j < reservations.size(); j++) {
-                if (!assigned[j]) {
+                if (remainingPassengers[j] > 0) {
                     LocalDateTime t = reservations.get(j).getDateHeureArrivee().toLocalDateTime();
                     LocalDateTime deferAfter = reportEligibleAfter.get(reservations.get(j).getId());
                     boolean deferOk = (deferAfter == null) || heureInitiale.isAfter(deferAfter);
@@ -188,76 +197,125 @@ public class PlanningController {
                     .max(Comparator.naturalOrder())
                     .orElse(heureInitiale);
 
-                // --- Véhicules disponibles avant fin de tranche ---
+                // --- Véhicules disponibles ---
+                // Règle: pour le 1er trajet de la journée, une voiture doit être
+                // disponible dès l'heure initiale de la tranche.
+                // Ensuite, elle peut être réutilisée si elle revient avant la fin de tranche.
                 final LocalDateTime hMax = fenetreMax;
+                final LocalDateTime hInit = heureInitiale;
             List<Voiture> disponibles = voitures.stream()
-                    .filter(v -> !disponibleA.get(v.getId()).isAfter(hMax))
+                    .filter(v -> {
+                        LocalDateTime dispo = disponibleA.get(v.getId());
+                        int trajets = nbTrajets.getOrDefault(v.getId(), 0);
+                        if (trajets == 0) {
+                            return !dispo.isAfter(hInit);
+                        }
+                        return !dispo.isAfter(hMax);
+                    })
                     .collect(Collectors.toList());
 
             // --- Distribuer les réservations du groupe en lots (un véhicule par lot) ---
-            boolean[] groupeAssigned = new boolean[groupeIdx.size()];
+            while (true) {
+                List<Integer> indicesActifs = groupeIdx.stream()
+                        .filter(idx -> remainingPassengers[idx] > 0)
+                        .sorted(Comparator
+                                .comparingInt((Integer idx) -> remainingPassengers[idx])
+                                .reversed()
+                                .thenComparing(idx -> reservations.get(idx).getDateHeureArrivee().toLocalDateTime()))
+                        .collect(Collectors.toList());
 
-            for (int gi = 0; gi < groupeIdx.size(); gi++) {
-                if (groupeAssigned[gi]) continue;
+                if (indicesActifs.isEmpty()) break;
 
-                int firstIdx = groupeIdx.get(gi);
+                int firstIdx = indicesActifs.get(0);
                 Reservation premiere = reservations.get(firstIdx);
 
-                // Calculer le total passagers pour les réservations restantes du groupe
-                List<Integer> candidatsGi = new ArrayList<>();
-                for (int gj = gi + 1; gj < groupeIdx.size(); gj++) {
-                    if (!groupeAssigned[gj]) candidatsGi.add(gj);
+                int totalPassagersRestants = indicesActifs.stream()
+                        .mapToInt(idx -> remainingPassengers[idx])
+                        .sum();
+
+                // Essayer de trouver un véhicule qui prend tout le monde restant du groupe
+                Voiture selectionne = selectMeilleurVehicule(disponibles, totalPassagersRestants, nbTrajets);
+
+                // Sinon, prendre un véhicule qui prend au moins le plus gros reliquat
+                if (selectionne == null) {
+                    selectionne = selectMeilleurVehicule(disponibles, remainingPassengers[firstIdx], nbTrajets);
                 }
 
-                int totalPassagers = premiere.getNbPassager()
-                        + candidatsGi.stream()
-                              .mapToInt(gj -> reservations.get(groupeIdx.get(gj)).getNbPassager())
-                              .sum();
-
-                // Essayer de trouver un véhicule qui prend tout le monde
-                Voiture selectionne = selectMeilleurVehicule(disponibles, totalPassagers, nbTrajets);
-
-                // Si impossible avec tous, prendre au moins la première réservation
+                // Si toujours null, autoriser le split sur le meilleur véhicule disponible
                 if (selectionne == null) {
-                    selectionne = selectMeilleurVehicule(disponibles, premiere.getNbPassager(), nbTrajets);
+                    selectionne = selectVehiculePourSplit(disponibles, nbTrajets);
                 }
 
-                // Si toujours null : aucun véhicule disponible → réservation non assignée
+                // Si toujours null : aucun véhicule disponible dans la tranche
                 if (selectionne == null) {
-                    boolean capaciteInsuffisante = voitures.stream()
-                            .noneMatch(v -> v.getNbPlace() >= premiere.getNbPassager());
-                    groupeAssigned[gi] = true;
+                    boolean capaciteInsuffisante = voitures.stream().noneMatch(v -> v.getNbPlace() > 0);
+                    boolean blockedByStartAvailability = isBlockedByStartAvailability(
+                        voitures, disponibleA, nbTrajets, heureInitiale);
 
                     if (capaciteInsuffisante) {
-                        String reason = "Capacité insuffisante (" + premiere.getNbPassager()
-                                + " passager(s) requis, max disponible : "
+                        Reservation reliquat = copyReservationWithPassengers(premiere, remainingPassengers[firstIdx]);
+                        String reason = "Capacité insuffisante (" + remainingPassengers[firstIdx]
+                                + " passager(s) restant(s), max disponible : "
                                 + voitures.stream().mapToInt(Voiture::getNbPlace).max().orElse(0) + " places)";
-                        premiere.setUnassignedReason(reason);
-                        unassigned.add(premiere);
-                        assigned[firstIdx] = true;
+                        reliquat.setUnassignedReason(reason);
+                        unassigned.add(reliquat);
+                        remainingPassengers[firstIdx] = 0;
+                    } else if (blockedByStartAvailability) {
+                    Reservation reliquat = copyReservationWithPassengers(premiere, remainingPassengers[firstIdx]);
+                    LocalDateTime firstDispo = getEarliestVoitureDispo(voitures, disponibleA);
+                    String firstDispoStr = firstDispo != null
+                        ? String.format("%02dh%02d", firstDispo.getHour(), firstDispo.getMinute())
+                        : "inconnue";
+                    reliquat.setUnassignedReason(
+                        "Aucun véhicule disponible à l'heure d'arrivée (1ère disponibilité: " + firstDispoStr + ")");
+                    unassigned.add(reliquat);
+                    remainingPassengers[firstIdx] = 0;
                     } else {
                         // Report intelligent : rejouer seulement dans une tranche ultérieure
                         // dont l'heure initiale dépasse la fin de la fenêtre actuelle.
                         reportEligibleAfter.put(premiere.getId(), fenetreMax);
                     }
-                    continue;
+                    break;
                 }
 
-                // --- Constituer le lot final (greedy selon la capacité du véhicule choisi) ---
+                // --- Constituer le lot final (greedy, avec possibilité de split d'une réservation) ---
                 List<Reservation> lot = new ArrayList<>();
-                lot.add(premiere);
-                groupeAssigned[gi] = true;
-                assigned[firstIdx] = true;
-                int passagersLot = premiere.getNbPassager();
+                int capaciteRestante = selectionne.getNbPlace();
 
-                for (int gj : candidatsGi) {
-                    int nb = reservations.get(groupeIdx.get(gj)).getNbPassager();
-                    if (passagersLot + nb <= selectionne.getNbPlace()) {
-                        lot.add(reservations.get(groupeIdx.get(gj)));
-                        groupeAssigned[gj] = true;
-                        assigned[groupeIdx.get(gj)] = true;
-                        passagersLot += nb;
-                    }
+                // 1) Choisir d'abord la réservation la plus proche de la capacité du véhicule
+                //    (en cas d'égalité: plus grand reliquat).
+                Integer startIdx = pickBestGapReservationIndex(indicesActifs, remainingPassengers, capacitiesafe(capaciteRestante));
+                if (startIdx == null) {
+                    startIdx = firstIdx;
+                }
+
+                int restantPremier = remainingPassengers[startIdx];
+                if (restantPremier > 0 && capaciteRestante > 0) {
+                    int affectes = Math.min(restantPremier, capaciteRestante);
+                    Reservation part = copyReservationWithPassengers(reservations.get(startIdx), affectes);
+                    lot.add(part);
+                    remainingPassengers[startIdx] -= affectes;
+                    capaciteRestante -= affectes;
+                }
+
+                // 2) Ensuite, choisir la réservation dont l'écart avec la capacité restante est le plus proche
+                while (capaciteRestante > 0) {
+                    Integer bestIdx = pickBestGapReservationIndex(indicesActifs, remainingPassengers, capacitiesafe(capaciteRestante));
+                    if (bestIdx == null) break;
+
+                    int restant = remainingPassengers[bestIdx];
+                    if (restant <= 0) break;
+
+                    int affectes = Math.min(restant, capaciteRestante);
+                    Reservation part = copyReservationWithPassengers(reservations.get(bestIdx), affectes);
+                    lot.add(part);
+
+                    remainingPassengers[bestIdx] -= affectes;
+                    capaciteRestante -= affectes;
+                }
+
+                if (lot.isEmpty()) {
+                    break;
                 }
 
                 // Retirer le véhicule sélectionné des disponibles pour ce groupe
@@ -297,15 +355,18 @@ public class PlanningController {
 
         // Finaliser les réservations restantes non assignées (ex: report sans tranche ultérieure)
         for (int idx = 0; idx < reservations.size(); idx++) {
-            if (!assigned[idx]) {
+            if (remainingPassengers[idx] > 0) {
                 Reservation r = reservations.get(idx);
+                Reservation reliquat = copyReservationWithPassengers(r, remainingPassengers[idx]);
                 if (r.getUnassignedReason() == null || r.getUnassignedReason().trim().isEmpty()) {
                     LocalDateTime t = r.getDateHeureArrivee().toLocalDateTime();
                     String timeStr = String.format("%02dh%02d", t.getHour(), t.getMinute());
-                    r.setUnassignedReason("Aucun véhicule compatible disponible après report (arrivée " + timeStr + ")");
+                    reliquat.setUnassignedReason("Aucun véhicule compatible disponible après report (arrivée " + timeStr + ")");
+                } else {
+                    reliquat.setUnassignedReason(r.getUnassignedReason());
                 }
-                unassigned.add(r);
-                assigned[idx] = true;
+                unassigned.add(reliquat);
+                remainingPassengers[idx] = 0;
             }
         }
 
@@ -424,6 +485,99 @@ public class PlanningController {
 
         return optimaux.get(0);
         }
+
+    /**
+     * Sélection de secours pour autoriser le découpage d'une réservation :
+     * on prend le véhicule avec la plus grande capacité, puis moins de trajets,
+     * puis priorité carburant.
+     */
+    private Voiture selectVehiculePourSplit(List<Voiture> candidats,
+                                            Map<Integer, Integer> nbTrajets) {
+        return candidats.stream()
+                .filter(v -> v.getNbPlace() > 0)
+                .sorted(Comparator
+                        .comparingInt(Voiture::getNbPlace).reversed()
+                        .thenComparingInt(v -> nbTrajets.getOrDefault(v.getId(), 0))
+                        .thenComparingInt(v -> fuelRank(v.getCarburant()))
+                        .thenComparingInt(Voiture::getId))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /** Copie d'une réservation avec un nombre de passagers spécifique (pour split). */
+    private Reservation copyReservationWithPassengers(Reservation source, int nbPassagers) {
+        Reservation copy = new Reservation();
+        copy.setId(source.getId());
+        copy.setIdClient(source.getIdClient());
+        copy.setIdHotel(source.getIdHotel());
+        copy.setNbPassager(nbPassagers);
+        copy.setDateHeureArrivee(source.getDateHeureArrivee());
+        copy.setIdLieuDestination(source.getIdLieuDestination());
+        copy.setLieuCode(source.getLieuCode());
+        copy.setHotelName(source.getHotelName());
+        copy.setHotelVille(source.getHotelVille());
+        copy.setUnassignedReason(source.getUnassignedReason());
+        return copy;
+    }
+
+    /**
+     * Choisit l'index de réservation dont le reliquat est le plus proche
+     * de la capacité restante. En cas d'égalité, on priorise le plus grand reliquat,
+     * puis l'heure d'arrivée la plus tôt.
+     */
+    private Integer pickBestGapReservationIndex(List<Integer> candidateIndices,
+                                                int[] remainingPassengers,
+                                                int capaciteRestante) {
+        return candidateIndices.stream()
+                .filter(idx -> remainingPassengers[idx] > 0)
+                .min(Comparator
+                        .comparingInt((Integer idx) -> Math.abs(remainingPassengers[idx] - capaciteRestante))
+                        .thenComparing((Integer idx) -> remainingPassengers[idx], Comparator.reverseOrder())
+                        .thenComparing(idx -> idx))
+                .orElse(null);
+    }
+
+    private int capacitiesafe(int capaciteRestante) {
+        return Math.max(0, capaciteRestante);
+    }
+
+    /**
+     * Cas strict: aucun véhicule n'a encore démarré sa journée et
+     * toutes les disponibilités initiales sont après l'heure de la tranche.
+     * Dans ce cas, on n'autorise pas le report d'une réservation plus tôt.
+     */
+    private boolean isBlockedByStartAvailability(List<Voiture> voitures,
+                                                 Map<Integer, LocalDateTime> disponibleA,
+                                                 Map<Integer, Integer> nbTrajets,
+                                                 LocalDateTime heureInitiale) {
+        boolean hasFutureStart = false;
+        boolean hasStartedOrAlreadyAvailable = false;
+
+        for (Voiture v : voitures) {
+            if (v.getNbPlace() <= 0) continue;
+
+            int trajets = nbTrajets.getOrDefault(v.getId(), 0);
+            LocalDateTime dispo = disponibleA.get(v.getId());
+            if (dispo == null) continue;
+
+            if (trajets > 0 || !dispo.isAfter(heureInitiale)) {
+                hasStartedOrAlreadyAvailable = true;
+                break;
+            }
+            hasFutureStart = true;
+        }
+
+        return hasFutureStart && !hasStartedOrAlreadyAvailable;
+    }
+
+    private LocalDateTime getEarliestVoitureDispo(List<Voiture> voitures,
+                                                  Map<Integer, LocalDateTime> disponibleA) {
+        return voitures.stream()
+                .map(v -> disponibleA.get(v.getId()))
+                .filter(Objects::nonNull)
+                .min(LocalDateTime::compareTo)
+                .orElse(null);
+    }
 
         private int fuelRank(char carburant) {
         if (carburant == 'd') return 0;
@@ -547,5 +701,20 @@ public class PlanningController {
             if (rs.next()) return rs.getInt("id");
         }
         return 0;
+    }
+
+    private Map<Integer, LocalDateTime> getVoitureDisponibiliteInitiale(LocalDate planningDate) throws SQLException {
+        Map<Integer, LocalDateTime> map = new HashMap<>();
+        String sql = "SELECT id, heure_disponible FROM voiture";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                Time t = rs.getTime("heure_disponible");
+                LocalTime heure = (t != null) ? t.toLocalTime() : LocalTime.MIDNIGHT;
+                map.put(rs.getInt("id"), planningDate.atTime(heure));
+            }
+        }
+        return map;
     }
 }
