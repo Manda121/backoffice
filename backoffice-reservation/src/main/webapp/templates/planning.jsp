@@ -545,13 +545,13 @@
 
                         <%-- Vehicle info --%>
                         <div class="plan-head-vehicle">
-                            <div class="plan-num"> V<%= v.getId() %></div>
+                            <div class="plan-num">voiture:<%= v.getId() %></div>
                             <div>
-                                <div class="plan-vehicle-name">
+                                <!-- <div class="plan-vehicle-name">
                                     <%= v.getMatricule() != null ? v.getMatricule() : "Véhicule #" + v.getId() %>
-                                </div>
+                                </div> -->
                                 <div class="plan-vehicle-sub">
-                                    <%= v.getMarque() %> &bull; <%= v.getType() %>
+                                    <!-- <%= v.getMarque() %> &bull; <%= v.getType() %> -->
                                     &nbsp;<span class="tag <%= carbClass %>"><%= carbLabel %></span>
                                     <span class="tag" style="background:#f7fafc; color:#4a5568; border:1px solid #e2e8f0;"><%= capacity %> places</span>
                                 </div>
@@ -597,16 +597,17 @@
                             <thead>
                                 <tr>
                                     <th>Client</th>
-                                    <th>Réservation</th>
-                                    <th>Destination</th>
-                                    <th>Heure d'arrivée</th>
                                     <th>Passagers</th>
+                                    <th>Réservation</th>
+                                    <th>Heure d'arrivée</th>
+                                    <th>Destination</th>
                                 </tr>
                             </thead>
                             <tbody>
                             <% for (Reservation r : entry.getReservations()) { %>
                                 <tr>
                                     <td><span class="res-id">Client: <%= r.getIdClient() %></span></td>
+                                    <td class="pax-count"><%= r.getNbPassager() %> passager(s)</td>
                                     <td style="color:#4a5568;">Reservation N:  <%= r.getId() %></td>
                                     <td class="hotel-code">
                                         <%= r.getLieuCode() != null ? r.getLieuCode() : "Hôtel #" + r.getIdHotel() %>
@@ -614,7 +615,6 @@
                                     <td class="res-arrive">
                                         <%= r.getDateHeureArrivee() != null ? sdfH.format(r.getDateHeureArrivee()) : "—" %>
                                     </td>
-                                    <td class="pax-count"><%= r.getNbPassager() %> passager(s)</td>
                                 </tr>
                             <% } %>
                             </tbody>

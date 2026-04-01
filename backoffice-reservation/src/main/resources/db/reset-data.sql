@@ -18,30 +18,26 @@ TRUNCATE TABLE planification, reservation, distance, hotel, voiture, token, para
 -- ============================================================
 INSERT INTO hotel (name, ville, adresse, code, is_airport) VALUES
     ('Aéroport d''Ivato', 'Ivato',         'BP 4009, Ivato, Antananarivo', 'IVATO',  TRUE),
-    ('Hotel 1',          'Antananarivo',  'Avenue de l''Indépendance',   'HOTEL1', FALSE),
-    ('Hotel 2',          'Antananarivo',  'Avenue de l''Indépendance',   'HOTEL2', FALSE);
+    ('Hotel 1',          'Antananarivo',  'Avenue de l''Indépendance',   'HOTEL1', FALSE);
     
 
 -- ============================================================
 -- 3. Voitures  (id 1..4)
 -- ============================================================
 INSERT INTO voiture (marque, nb_place, type, matricule, carburant, heure_disponible) VALUES
-    ('v1',  5, 'Minibus', 'MAD-001', 'd', '2026-03-19 09:00:00'),
-    ('v2',  5, 'Minibus', 'MAD-001', 'e', '2026-03-19 09:00:00'),
-    ('v3',  12, 'Minibus', 'MAD-001', 'd', '2026-03-19 08:00:00'),
-    ('v4',  9, 'Minibus', 'MAD-001', 'd', '2026-03-19 09:00:00'),
-    ('v5',  12, 'Berline', 'MAD-002', 'e', '2026-03-19 13:00:00');
+    ('v1',  12, 'Berline', 'MAD-002', 'd', '2026-04-01 00:00:00'),
+    ('v2',  13, 'Berline', 'MAD-002', 'd', '2026-04-01 00:00:00');
 
 -- ============================================================
 -- 4. Réservations  (référence hotel id 2 = HOTEL1)
 -- ============================================================
 INSERT INTO reservation (id_client, id_hotel, nb_passager, date_heure_arrivee, nom) VALUES
-    ('cli1', 2,  7, '2026-03-19 09:00:00', 'Client1'),
-    ('cli2', 3,  20, '2026-03-19 08:00:00', 'Client2'),
-    ('cli3', 2,  3, '2026-03-19 09:10:00', 'Client3'),
-    ('cli4', 2,  10, '2026-03-19 09:15:00', 'Client4'),
-    ('cli5', 2,  5, '2026-03-19 09:20:00', 'Client5'),
-    ('cli6', 2,  12, '2026-03-19 13:30:00', 'Client6');
+    ('cli1', 1,  10, '2026-04-01 08:00:00', 'Client1'),
+    ('cli2', 1,  15, '2026-04-01 10:10:00', 'Client2'),
+    ('cli3', 1,  8, '2026-04-01 08:15:00', 'Client3'),
+    ('cli4', 1,  5, '2026-04-01 10:45:00', 'Client4'),
+    ('cli5', 1,  13, '2026-04-01 11:00:00', 'Client5'),
+    ('cli6', 1,  13, '2026-04-01 11:00:00', 'Client6');
     
 
 -- ============================================================
@@ -55,9 +51,7 @@ INSERT INTO token (token, date_heure_expiration) VALUES
 -- 6. Distances  (IVATO → HOTEL1)
 -- ============================================================
 INSERT INTO distance (lieu_from, lieu_to, km) VALUES
-    (1, 2, 90.0),
-    (1, 3, 35.0),
-    (2, 3, 60.0);
+    (1, 2, 50.0);
 
 -- ============================================================
 -- 7. Paramètres
