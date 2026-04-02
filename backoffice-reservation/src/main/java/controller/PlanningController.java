@@ -143,7 +143,15 @@ public class PlanningController {
 
         /** Indices du backlog ayant encore des passagers restants. */
         List<Integer> backlogActifs() {
-            return backlog.stream().filter(i -> restants[i] > 0).collect(Collectors.toList());
+            return backlog.stream()
+                .filter(i -> restants[i] > 0)
+                // Backlog prioritaire, trié par passagers restants (décroissant)
+                .sorted(Comparator
+                    .comparingInt((Integer i) -> -restants[i])
+                    // Départage stable pour garder un comportement prévisible
+                    .thenComparing(i -> reservations.get(i).getDateHeureArrivee().toLocalDateTime())
+                    .thenComparingInt(i -> i))
+                .collect(Collectors.toList());
         }
 
         /** True si au moins une réservation non assignée existe (backlog ou nouvelle). */
@@ -247,6 +255,16 @@ public class PlanningController {
                 LocalDateTime prochaineDispo = state.prochainDispoVehicule();
                 if (prochaineDispo == null) break; // aucun véhicule du tout (impossible normalement)
 
+                // Nouvelle règle : une réservation est considérée "non assignée" (backlog)
+                // si elle est déjà arrivée mais aucune voiture n'est encore disponible.
+                // Donc, au moment où un véhicule redevient dispo, toutes les résa dont
+                // l'heure d'arrivée <= prochaineDispo deviennent prioritaires.
+                for (int i = 0; i < reservations.size(); i++) {
+                    if (state.restants[i] <= 0 || state.backlog.contains(i)) continue;
+                    LocalDateTime arr = reservations.get(i).getDateHeureArrivee().toLocalDateTime();
+                    if (!arr.isAfter(prochaineDispo)) state.backlog.add(i);
+                }
+
                 anchorTime         = prochaineDispo;
                 fenetreMax         = anchorTime.plusMinutes(tempsAttenteMin);
                 vehiculesEligibles = eligiblesDansFenetre(state, fenetreMax);
@@ -276,7 +294,13 @@ public class PlanningController {
 
                 List<Integer> bActifs = state.backlogActifs();
                 List<Integer> nActifs = nouvellesIdx.stream()
-                        .filter(i -> state.restants[i] > 0).collect(Collectors.toList());
+                    .filter(i -> state.restants[i] > 0)
+                    // Tri par passagers restants (décroissant)
+                    .sorted(Comparator
+                        .comparingInt((Integer i) -> -state.restants[i])
+                        .thenComparing(i -> reservations.get(i).getDateHeureArrivee().toLocalDateTime())
+                        .thenComparingInt(i -> i))
+                    .collect(Collectors.toList());
                 if (bActifs.isEmpty() && nActifs.isEmpty()) break;
 
                 List<Voiture> disponibles = vehiculesEligibles.stream()
@@ -389,28 +413,31 @@ public class PlanningController {
         // ── Constitution du lot ───────────────────────────────────────────────
         //   Départ immédiat → candidats = backlog uniquement
         //   Attente         → candidats = backlog EN PREMIER, puis nouvelles
-        List<Integer> candidatsLot = new ArrayList<>(bActifs);
-        if (!departImmédiat) candidatsLot.addAll(nActifs);
+        List<Integer> bSorted = new ArrayList<>(bActifs);
+        bSorted.sort(Comparator
+            .comparingInt((Integer i) -> -state.restants[i])
+            .thenComparing(i -> state.reservations.get(i).getDateHeureArrivee().toLocalDateTime())
+            .thenComparingInt(i -> i));
+
+        List<Integer> nSorted = new ArrayList<>(nActifs);
+        nSorted.sort(Comparator
+            .comparingInt((Integer i) -> -state.restants[i])
+            .thenComparing(i -> state.reservations.get(i).getDateHeureArrivee().toLocalDateTime())
+            .thenComparingInt(i -> i));
+
+        List<Integer> candidatsLot = new ArrayList<>(bSorted);
+        if (!departImmédiat) candidatsLot.addAll(nSorted);
 
         List<Reservation> lot   = new ArrayList<>();
         int capaciteRestante    = capaciteVehicule;
 
         while (capaciteRestante > 0 && !candidatsLot.isEmpty()) {
-            final int capR = capaciteRestante;
-
-            // Choix de la meilleure réservation candidate :
-            //   a) backlog avant nouvelles
-            //   b) reliquat le plus proche de la capacité restante
-            //   c) à égalité : plus grand reliquat
-            //   d) à égalité : index le plus petit (ordre chronologique)
+            // Règle : on prend d'abord les groupes les plus nombreux.
+            // Le backlog est prioritaire car il est placé avant les nouvelles.
             Integer bestIdx = candidatsLot.stream()
-                    .filter(i -> state.restants[i] > 0)
-                    .min(Comparator
-                            .comparingInt((Integer i) -> state.backlog.contains(i) ? 0 : 1)
-                            .thenComparingInt((Integer i) -> Math.abs(state.restants[i] - capR))
-                            .thenComparingInt((Integer i) -> -state.restants[i])
-                            .thenComparingInt(i -> i))
-                    .orElse(null);
+                .filter(i -> state.restants[i] > 0)
+                .findFirst()
+                .orElse(null);
 
             if (bestIdx == null) break;
             candidatsLot.remove(bestIdx);
