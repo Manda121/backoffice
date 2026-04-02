@@ -446,6 +446,11 @@ public class PlanningController {
             lot.add(copyReservationWithPassengers(state.reservations.get(bestIdx), affectes));
             state.restants[bestIdx] -= affectes;
             capaciteRestante        -= affectes;
+
+            // Si une réservation a été splittée et qu'il reste des passagers,
+            // elle devient "non assignée" (backlog) et doit être prioritaire
+            // dès le prochain dispatch, y compris dans la même fenêtre.
+            if (state.restants[bestIdx] > 0) state.backlog.add(bestIdx);
         }
 
         if (lot.isEmpty()) return false;
