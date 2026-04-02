@@ -1,0 +1,48 @@
+Objectif :
+Améliorer l’algorithme d’assignation dans le PlanningController en ajoutant les règles suivantes :
+
+Gestion des réservations non assignées
+Lorsqu’il existe des réservations non assignées :
+Elles doivent être stockées et considérées comme prioritaires.
+Elles doivent être traitées avant toute nouvelle réservation.
+Retour d’un véhicule
+Lorsqu’un véhicule termine une course (heure de retour atteinte) :
+Il devient disponible.
+Il doit immédiatement vérifier s’il existe des réservations non assignées.
+Assignation prioritaire
+Si des réservations non assignées existent :
+Le véhicule doit les prendre en priorité.
+Il peut prendre partiellement une réservation si la capacité est insuffisante.
+Règle de départ immédiat (IMPORTANT)
+Si un véhicule prend des réservations non assignées :
+ET que le véhicule est plein après assignation :
+→ Il part immédiatement (sans attendre le temps d’attente).
+Règle d’attente
+Si le véhicule n’est PAS plein :
+Il doit attendre le temps d’attente configuré (paramètre système).
+Pendant ce temps, de nouvelles réservations peuvent être ajoutées à son groupe.
+Cas sans véhicule disponible
+Si des réservations existent mais qu’aucun véhicule n’est disponible :
+Elles restent en attente (non assignées).
+Elles deviennent prioritaires dès qu’un véhicule revient.
+Elles doivent être traitées avant toute nouvelle réservation, quel que soit le nombre.
+Contraintes
+Ne pas modifier les règles existantes (capacité, distance, vitesse, etc.).
+Ajouter cette logique sans casser le système actuel.
+Le code doit être clair, modulaire et maintenable.
+Idéalement, isoler cette logique dans une méthode ou un service dédié.
+
+Résultat attendu :
+
+Mise à jour du PlanningController (ou service associé)
+Gestion correcte des cas :
+véhicule plein → départ immédiat
+véhicule non plein → attente
+réservations en attente → priorité absolue
+
+Bonus (si possible) :
+
+Ajouter des logs pour suivre :
+assignation des réservations
+départ des véhicules
+cas de priorité
