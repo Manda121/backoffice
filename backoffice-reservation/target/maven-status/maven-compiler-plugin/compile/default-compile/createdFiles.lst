@@ -13,4 +13,5 @@ models\Hotel.class
 models\PlanningEntry.class
 models\Reservation.class
 controller\DistanceController.class
+controller\PlanningController$PlanningState.class
 models\Parametre.class
